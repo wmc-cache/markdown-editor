@@ -130,14 +130,3 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
-
-.cursor
-
-documents
-
-# Version file
-public/version.json
-
-CLAUDE.md
-
-.git.bak/
