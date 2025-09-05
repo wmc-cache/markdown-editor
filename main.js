@@ -6,6 +6,8 @@ class MarkdownEditor {
   constructor() {
     this.mainWindow = null;
     this.currentFile = null;
+    // 在构造函数中设置 IPC 处理器，只会执行一次
+    this.setupIpcHandlers();
   }
 
   createWindow() {
@@ -35,7 +37,6 @@ class MarkdownEditor {
     });
 
     this.setupMenu();
-    this.setupIpcHandlers();
   }
 
   setupMenu() {
