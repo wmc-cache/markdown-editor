@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Editor with DeepSeek</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/lib/codemirror.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@codemirror/theme-one-dark@6.1.2/dist/index.css">
+    <!-- highlight.js for code syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+</head>
+<body>
+    <div id="app" class="app">
+        <!-- 工具栏 -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <!-- <button id="newBtn" class="btn btn-primary" title="新建文件 (Ctrl+N)">
+                    📄 新建
+                </button>
+                <button id="openBtn" class="btn btn-secondary" title="打开文件 (Ctrl+O)">
+                    📂 打开
+                </button>
+                <button id="openFolderBtn" class="btn btn-secondary" title="打开文件夹 (Ctrl+Shift+O)">
+                    📁 打开文件夹
+                </button>
+                <button id="saveBtn" class="btn btn-secondary" title="保存文件 (Ctrl+S)">
+                    💾 保存
+                </button>
+                <div class="separator"></div> -->
+                <button id="optimizeSelectedBtn" class="btn btn-ai" title="优化选中文本 (Ctrl+Alt+O)">
+                    ✨ 优化选中
+                </button>
+                <button id="optimizeAllBtn" class="btn btn-ai" title="优化全文 (Ctrl+Alt+A)">
+                    🚀 优化全文
+                </button>
+            </div>
+            <div class="toolbar-right">
+                <button id="showPreview" class="btn btn-icon" title="显示预览" style="display: none;">
+                    👁️
+                </button>
+                <button id="themeToggle" class="btn btn-icon" title="切换主题">
+                    🌙
+                </button>
+                <button id="settingsBtn" class="btn btn-icon" title="API设置">
+                    ⚙️
+                </button>
+            </div>
+        </div>
+
+        <!-- 标签页区域 -->
+        <div class="tabs-container" id="tabsContainer">
+            <div class="tabs-wrapper">
+                <div class="tabs" id="tabs">
+                    <div class="tab active" id="tab-untitled" data-file-id="untitled">
+                        <span class="tab-title">未保存的文档</span>
+                        <span class="tab-unsaved-indicator" title="未保存">●</span>
+                        <button class="tab-close" title="关闭">×</button>
+                    </div>
+                </div>
+            </div>
+            <div class="tabs-actions">
+                <button id="newTabBtn" class="btn btn-icon" title="新建标签">+</button>
+            </div>
+        </div>
+
+        <!-- 主编辑区域 -->
+        <div class="main-content">
+            <!-- 文件树侧边栏 -->
+            <div class="file-tree-panel" id="fileTreePanel">
+                <div class="file-tree-content">
+                    <div id="fileTree" class="file-tree">
+                        <div class="file-tree-empty">
+                            <p>暂无打开的文件夹</p>
+                            <button id="openFolderFromTree" class="btn btn-secondary">
+                                📁 选择文件夹
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 编辑器面板 -->
+            <div class="editor-panel">
+                <div class="panel-header">
+                    <h3>📝 编辑器</h3>
+                </div>
+                <div id="editor" class="editor-container"></div>
+            </div>
+
+            <!-- 分隔条 -->
+            <div class="resizer" id="resizer"></div>
+
+            <!-- 预览面板 -->
+            <div class="preview-panel" id="previewPanel">
+                <div class="panel-header">
+                    <h3>👁️ 预览</h3>
+                    <button id="closePreview" class="btn btn-icon" title="关闭预览">
+                        ✕
+                    </button>
+                </div>
+                <div id="preview" class="preview-container">
+                    <div class="empty-state">
+                        <h2>欢迎使用 Markdown 编辑器</h2>
+                        <p>开始输入 Markdown 内容，右侧将显示实时预览</p>
+                        <div class="features">
+                            <h3>功能特性：</h3>
+                            <ul>
+                                <li>🎨 实时 Markdown 预览</li>
+                                <li>🤖 DeepSeek AI 提示词优化</li>
+                                <li>🌙 明暗主题切换</li>
+                                <li>💾 文件管理功能</li>
+                                <li>⌨️ 丰富的快捷键支持</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 状态栏 -->
+        <div class="status-bar">
+            <div class="status-left">
+                <span id="fileStatus">新建文档</span>
+            </div>
+            <div class="status-right">
+                <span id="wordCount">0 字符</span>
+            
+                <span id="lineCount">第 1 行</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- API设置模态框 -->
+    <div id="apiSettingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>DeepSeek API 设置</h3>
+                <span class="close" id="closeModal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="apiKey">API Key:</label>
+                    <input type="password" id="apiKey" placeholder="输入你的 DeepSeek API Key">
+                    <small>获取 API Key: <a href="https://platform.deepseek.com/api_keys" target="_blank">DeepSeek 官网</a></small>
+                </div>
+                <div class="form-group">
+                    <label for="apiEndpoint">API 地址:</label>
+                    <input type="text" id="apiEndpoint" value="https://api.deepseek.com/chat/completions">
+                </div>
+                <div class="form-group">
+                    <label for="model">模型:</label>
+                    <select id="model">
+                        <option value="deepseek-chat">deepseek-chat</option>
+                <option value="deepseek-reasoner">deepseek-reasoner</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="systemPrompt">系统提示词:</label>
+                    <textarea id="systemPrompt" rows="4" placeholder="输入系统提示词，用于指导AI优化文本...">你是一个专业的文本优化助手。请帮我优化以下文本，让它更清晰、准确、易懂。保持原文的主要意思，但可以改进表达方式、语法和结构。</textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="saveSettings" class="btn btn-primary">保存设置</button>
+                <button id="testApi" class="btn btn-secondary">测试连接</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI优化结果对比模态框 -->
+    <div id="comparisonModal" class="modal" style="display: none;">
+        <div class="modal-content comparison-modal">
+            <div class="modal-header">
+                <h3>AI 优化结果对比</h3>
+                <button id="closeComparison" class="btn btn-icon" title="关闭">
+                    ✕
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="comparison-container">
+                    <div class="comparison-panel">
+                        <h4>📝 优化前</h4>
+                        <div id="originalText" class="text-compare original"></div>
+                    </div>
+                    <div class="comparison-panel">
+                        <h4>✨ 优化后</h4>
+                        <div id="optimizedText" class="text-compare optimized"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="rejectChanges" class="btn btn-secondary">保持原文</button>
+                <button id="applyChanges" class="btn btn-primary">应用优化</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载遮罩 -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>AI 正在优化文本...</p>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/markdown.min.js"></script>
+    <script src="../node_modules/markdown-it/dist/markdown-it.min.js"></script>
+    <script src="../node_modules/axios/dist/axios.min.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>
