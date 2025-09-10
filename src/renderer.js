@@ -1,6 +1,5 @@
 /**
  * 主应用程序入口
- * 使用模块化组件重构后的版本
  */
 
 class MarkdownEditorApp {
@@ -452,9 +451,154 @@ class MarkdownEditorApp {
     }
   }
   
+  // 文本长度和 Token 估算函数
+  estimateTokens(text) {
+    // 粗略估算：中文字符约1.5个token，英文单词约1个token
+    const chineseChars = (text.match(/[\u4e00-\u9fff]/g) || []).length;
+    const englishWords = text.replace(/[\u4e00-\u9fff]/g, '').split(/\s+/).filter(w => w.length > 0).length;
+    return Math.ceil(chineseChars * 1.5 + englishWords);
+  }
+
+  // 智能分割文本函数
+  splitText(text, maxChars = 3000) {
+    if (text.length <= maxChars) {
+      return [text];
+    }
+
+    const chunks = [];
+    const paragraphs = text.split(/\n\s*\n/); // 按段落分割
+    let currentChunk = '';
+
+    for (const paragraph of paragraphs) {
+      // 如果单个段落就超长，需要进一步分割
+      if (paragraph.length > maxChars) {
+        // 先保存当前块
+        if (currentChunk.trim()) {
+          chunks.push(currentChunk.trim());
+          currentChunk = '';
+        }
+        
+        // 按句子分割超长段落
+        const sentences = paragraph.split(/[。！？.!?]\s*/);
+        let sentenceChunk = '';
+        
+        for (const sentence of sentences) {
+          if (sentenceChunk.length + sentence.length > maxChars) {
+            if (sentenceChunk.trim()) {
+              chunks.push(sentenceChunk.trim());
+            }
+            sentenceChunk = sentence;
+          } else {
+            sentenceChunk += (sentenceChunk ? '。' : '') + sentence;
+          }
+        }
+        
+        if (sentenceChunk.trim()) {
+          currentChunk = sentenceChunk;
+        }
+      } else {
+        // 检查添加这个段落是否会超长
+        if (currentChunk.length + paragraph.length + 2 > maxChars) {
+          chunks.push(currentChunk.trim());
+          currentChunk = paragraph;
+        } else {
+          currentChunk += (currentChunk ? '\n\n' : '') + paragraph;
+        }
+      }
+    }
+
+    if (currentChunk.trim()) {
+      chunks.push(currentChunk.trim());
+    }
+
+    return chunks.filter(chunk => chunk.trim().length > 0);
+  }
+
   async callDeepSeekAPI(text) {
+    const MAX_CHARS = 8000; // 单次处理的最大字符数
+    const estimatedTokens = this.estimateTokens(text);
+    
+    // 检查文本长度
+    if (text.length > MAX_CHARS || estimatedTokens > 6000) {
+      return await this.callDeepSeekAPIWithChunks(text);
+    } else {
+      return await this.callSingleDeepSeekAPI(text);
+    }
+  }
+
+  // 处理超长文本的分块API调用
+  async callDeepSeekAPIWithChunks(text) {
+    const chunks = this.splitText(text, 3000);
     const loadingOverlay = document.getElementById('loadingOverlay');
+    
+    if (chunks.length > 1) {
+      const confirmed = confirm(
+        `文本较长，需要分成 ${chunks.length} 段进行处理，这可能需要较长时间。是否继续？`
+      );
+      if (!confirmed) {
+        return null;
+      }
+    }
+    
     loadingOverlay.classList.add('show');
+    
+    // 更新加载提示
+    const loadingText = document.querySelector('#loadingOverlay .loading-text');
+    if (loadingText) {
+      loadingText.textContent = `正在优化第 1/${chunks.length} 段...`;
+    }
+    
+    try {
+      const optimizedChunks = [];
+      
+      for (let i = 0; i < chunks.length; i++) {
+        // 更新进度
+        if (loadingText) {
+          loadingText.textContent = `正在优化第 ${i + 1}/${chunks.length} 段...`;
+        }
+        
+        const optimizedChunk = await this.callSingleDeepSeekAPI(chunks[i], false);
+        if (optimizedChunk) {
+          optimizedChunks.push(optimizedChunk);
+        } else {
+          // 如果某一段失败，询问是否继续
+          const shouldContinue = confirm(
+            `第 ${i + 1} 段优化失败，是否继续处理剩余段落？`
+          );
+          if (!shouldContinue) {
+            break;
+          }
+          // 使用原文本作为备用
+          optimizedChunks.push(chunks[i]);
+        }
+        
+        // 在段落之间添加短暂延迟，避免API限流
+        if (i < chunks.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+      
+      // 拼接结果
+      return optimizedChunks.join('\n\n');
+      
+    } catch (error) {
+      console.error('分块处理失败:', error);
+      alert(`分块处理失败: ${error.message}`);
+      return null;
+    } finally {
+      loadingOverlay.classList.remove('show');
+      if (loadingText) {
+        loadingText.textContent = '正在处理...';
+      }
+    }
+  }
+
+  // 单个API调用
+  async callSingleDeepSeekAPI(text, showOverlay = true) {
+    if (showOverlay) {
+      const loadingOverlay = document.getElementById('loadingOverlay');
+      loadingOverlay.classList.add('show');
+    }
     
     try {
       const response = await axios.post(this.apiSettings.endpoint, {
@@ -469,13 +613,14 @@ class MarkdownEditorApp {
             content: text
           }
         ],
+        max_tokens: 4000, // 限制返回长度
         stream: false
       }, {
         headers: {
           'Authorization': `Bearer ${this.apiSettings.apiKey}`,
           'Content-Type': 'application/json'
         },
-        timeout: 30000
+        timeout: 60000 // 增加超时时间到60秒
       });
       
       if (response.data && response.data.choices && response.data.choices.length > 0) {
@@ -498,10 +643,17 @@ class MarkdownEditorApp {
         errorMessage += `: ${error.message}`;
       }
       
-      alert(errorMessage);
+      if (showOverlay) {
+        alert(errorMessage);
+      } else {
+        console.error(errorMessage);
+      }
       return null;
     } finally {
-      loadingOverlay.classList.remove('show');
+      if (showOverlay) {
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        loadingOverlay.classList.remove('show');
+      }
     }
   }
   
