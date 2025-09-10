@@ -6,11 +6,14 @@
 
 - 🎨 **实时预览** - 三栏布局，文件树、编辑器、实时预览
 - 📁 **文件夹管理** - 打开文件夹，文件树浏览，快速切换文件
-- 🤖 **AI 优化** - 集成 DeepSeek AI，智能优化文本内容
+- 🤖 **AI 优化** - 集成 DeepSeek AI，智能优化文本内容，支持长文本分块处理
 - 🌙 **主题切换** - 支持明亮和暗色主题
 - 💾 **文件管理** - 新建、打开、保存 Markdown 文件
+- 📑 **多标签支持** - 同时编辑多个文档，标签管理
 - ⌨️ **快捷键支持** - 丰富的键盘快捷键
 - 📱 **响应式设计** - 适配不同屏幕尺寸
+- 📦 **跨平台打包** - 支持 macOS 和 Windows 平台打包发布
+- 🔧 **模块化架构** - 清晰的代码结构，易于维护和扩展
 
 ## 安装依赖
 
@@ -33,7 +36,38 @@ npm start
 
 # 或者使用 electron 直接运行
 npx electron .
+
+# 开发模式（带调试信息）
+npm run dev
 ```
+
+## 打包发布
+
+本项目支持打包为 macOS 和 Windows 平台的可执行程序：
+
+```bash
+# 打包 macOS 版本（生成 .dmg 文件）
+npm run build:mac
+
+# 打包 Windows 版本（生成 .exe 安装程序）
+npm run build:win
+
+# 同时打包所有平台
+npm run build:all
+```
+
+### 打包输出
+
+打包完成后，文件将输出到 `dist/` 目录：
+
+- **macOS**: `Markdown Editor-1.0.0.dmg` (支持 Intel 和 Apple Silicon)
+- **Windows**: `Markdown Editor Setup 1.0.0.exe` (支持 x64 和 x86)
+
+### 分发说明
+
+- macOS 用户：下载 .dmg 文件，双击安装
+- Windows 用户：下载 .exe 文件，按向导安装
+- 安装程序会自动创建桌面快捷方式和开始菜单项
 
 ## 使用方法
 
@@ -83,17 +117,26 @@ npx electron .
 
 ```
 markdown-editor-deepseek/
-├── main.js                 # Electron 主进程
-├── preload.js              # 预加载脚本
-├── package.json            # 项目配置
-├── example.md              # 示例 Markdown 文件
-├── src/
+├── main/                    # 主进程模块
+│   ├── index.js            # 应用入口
+│   ├── window.js           # 窗口管理
+│   ├── menu.js             # 菜单配置
+│   ├── ipc-handlers.js     # IPC 通信处理
+│   └── file-operations.js  # 文件操作
+├── src/                     # 渲染进程
 │   ├── index.html          # 主页面
-│   ├── renderer.js         # 渲染进程逻辑
-│   ├── services/
-│   │   └── deepseek.js     # DeepSeek API 服务
+│   ├── renderer.js         # 渲染进程主逻辑
+│   ├── components/         # UI 组件
+│   │   ├── Editor.js       # 编辑器组件
+│   │   ├── Preview.js      # 预览组件
+│   │   ├── FileTree.js     # 文件树组件
+│   │   ├── TabManager.js   # 标签管理
+│   │   └── ThemeSelector.js # 主题选择
 │   └── styles/
 │       └── main.css        # 样式文件
+├── dist/                    # 打包输出目录
+├── preload.js              # 预加载脚本
+├── package.json            # 项目配置
 └── README.md               # 项目说明
 ```
 
@@ -105,6 +148,7 @@ markdown-editor-deepseek/
 - **markdown-it** - Markdown 解析和渲染
 - **axios** - HTTP 请求库
 - **DeepSeek API** - AI 文本优化服务
+- **electron-builder** - 跨平台打包工具
 
 ## 常见问题
 
@@ -128,16 +172,38 @@ A: 尝试：
 
 ## 开发说明
 
+本项目采用模块化架构，主要分为主进程和渲染进程两部分：
+
+### 主进程开发
+- `main/index.js` - 应用入口和生命周期管理
+- `main/window.js` - 窗口创建和管理
+- `main/menu.js` - 应用菜单配置
+- `main/ipc-handlers.js` - 进程间通信处理
+- `main/file-operations.js` - 文件系统操作
+
+### 渲染进程开发
+- `src/renderer.js` - 渲染进程主逻辑
+- `src/components/` - UI 组件模块
+- `src/styles/main.css` - 样式文件
+
 ### 添加新功能
-1. 在 `src/renderer.js` 中添加新的功能逻辑
-2. 在 `src/styles/main.css` 中添加相关样式
-3. 在 `main.js` 中添加主进程相关代码（如果需要）
+1. 在相应的组件文件中添加功能逻辑
+2. 如需主进程支持，在 `main/` 目录下添加相关代码
+3. 在 `src/styles/main.css` 中添加样式
+4. 通过 IPC 实现主进程与渲染进程通信
 
 ### 自定义主题
 修改 `src/styles/main.css` 中的 CSS 变量来自定义主题颜色。
 
 ### 扩展 AI 功能
-在 `src/services/deepseek.js` 中添加新的 AI 服务方法。
+在 `src/renderer.js` 中的 AI 相关方法中添加新功能，支持文本分块处理大型文档。
+
+### 打包配置
+修改 `package.json` 中的 `build` 字段来调整打包设置：
+- `files` - 指定打包包含的文件
+- `mac` - macOS 平台特定配置
+- `win` - Windows 平台特定配置
+- `nsis` - Windows 安装程序配置
 
 ## 许可证
 
