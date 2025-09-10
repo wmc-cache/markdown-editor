@@ -2,7 +2,7 @@
   "name": "markdown-editor-deepseek",
   "version": "1.0.0",
   "description": "Electron Markdown编辑器，集成DeepSeek API用于提示词优化",
-  "main": "main.js",
+  "main": "main/index.js",
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
