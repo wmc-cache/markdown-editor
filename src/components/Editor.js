@@ -163,6 +163,25 @@ class Editor {
     this.onSelectionChange = callback;
   }
 
+  // 在光标位置插入文本
+  insertTextAtCursor(text) {
+    const cursorPos = this.editor.selectionStart;
+    const newContent = this.currentContent.substring(0, cursorPos) + 
+                      text + 
+                      this.currentContent.substring(cursorPos);
+    
+    this.setContent(newContent);
+    
+    // 设置新的光标位置到插入文本的末尾
+    this.editor.selectionStart = cursorPos + text.length;
+    this.editor.selectionEnd = cursorPos + text.length;
+    this.editor.focus();
+    
+    if (this.onContentChange) {
+      this.onContentChange(newContent);
+    }
+  }
+
   // 添加样式
   addStyles() {
     const styleId = 'editor-styles';

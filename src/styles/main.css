@@ -1070,6 +1070,189 @@ body.resizing {
     background-color: var(--bg-secondary);
 }
 
+/* 图像生成模态框样式 */
+.image-generation-modal {
+    max-width: 600px;
+    width: 90vw;
+}
+
+.image-preview {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.image-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.image-container img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+}
+
+.image-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.image-info {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+}
+
+/* 按钮加载状态 */
+.btn-loading {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.spinner-small {
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* 表单帮助文本 */
+.form-help {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+/* 生成按钮样式增强 */
+#generateImageBtn {
+    background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+    border: none;
+    color: white;
+    font-weight: 600;
+}
+
+#generateImageBtn:hover {
+    background: linear-gradient(45deg, #ff5252, #26c6da);
+    transform: translateY(-1px);
+}
+
+#generateImageBtn:active {
+    transform: translateY(0);
+}
+
+/* 图像预览区域动画 */
+.image-preview {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* 预览面板头部样式 */
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* 图像历史模态框样式 */
+.image-history-modal {
+    max-width: 800px;
+    width: 90vw;
+    max-height: 80vh;
+}
+
+.image-history-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.empty-history {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-secondary);
+}
+
+.empty-history p {
+    margin-bottom: 1rem;
+}
+
+.history-item {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    margin-bottom: 1rem;
+    transition: var(--transition);
+}
+
+.history-item:hover {
+    background-color: var(--bg-secondary);
+}
+
+.history-image {
+    flex-shrink: 0;
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+}
+
+.history-details {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.history-prompt {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.history-meta {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+}
+
+.history-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: auto;
+}
+
+.history-actions .btn {
+    font-size: var(--font-size-sm);
+    padding: 0.25rem 0.5rem;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
     .main-content {
@@ -1094,4 +1277,32 @@ body.resizing {
         font-size: 0.75rem;
         padding: 0.25rem 0.5rem;
     }
+    
+    .image-generation-modal {
+        width: 95vw;
+        max-width: none;
+    }
+    
+    .image-actions {
+        flex-direction: column;
+    }
+    
+    .image-actions .btn {
+        justify-content: center;
+    }
+}
+
+/* API 配置区域样式 */
+.api-config {
+    margin-top: 1rem;
+    padding: 1rem;
+    background-color: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--border-color);
+}
+
+.api-config h4 {
+    margin-bottom: 1rem;
+    color: var(--text-primary);
+    font-weight: 600;
 }

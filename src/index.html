@@ -19,6 +19,9 @@
                 <button id="optimizeAllBtn" class="btn btn-ai" title="优化全文 (Ctrl+Alt+A)">
                     优化全文
                 </button>
+                <button id="generateImageBtn" class="btn btn-ai" title="AI生成图像 (Ctrl+Alt+I)">
+                    🎨 生成图像
+                </button>
             </div>
             <div class="toolbar-right">
                 <button id="showPreview" class="btn btn-icon" title="显示预览" style="display: none;">
@@ -79,9 +82,15 @@
             <!-- 预览面板 -->
             <div class="preview-panel" id="previewPanel">
                 <div class="panel-header">
-                    <h3>预览
-                        <button id="closePreview" class="btn btn-icon" title="关闭预览"> ✕</button>
-                    </h3>
+                    <h3>预览</h3>
+                    <div class="panel-actions">
+                        <button id="showImageHistory" class="btn btn-icon" title="查看图像历史">
+                            🖼️
+                        </button>
+                        <button id="closePreview" class="btn btn-icon" title="关闭预览">
+                            ✕
+                        </button>
+                    </div>
                 </div>
                 <div id="preview" class="preview-container">
                     <div class="empty-state">
@@ -119,25 +128,64 @@
     <div id="apiSettingsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>DeepSeek API 设置</h3>
+                <h3>AI API 设置</h3>
                 <span class="close" id="closeModal">&times;</span>
             </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label for="apiKey">API Key:</label>
-                    <input type="password" id="apiKey" placeholder="输入你的 DeepSeek API Key">
-                    <small>获取 API Key: <a href="https://platform.deepseek.com/api_keys" target="_blank">DeepSeek 官网</a></small>
-                </div>
-                <div class="form-group">
-                    <label for="apiEndpoint">API 地址:</label>
-                    <input type="text" id="apiEndpoint" value="https://api.deepseek.com/chat/completions">
-                </div>
-                <div class="form-group">
-                    <label for="model">模型:</label>
-                    <select id="model">
-                        <option value="deepseek-chat">deepseek-chat</option>
-                <option value="deepseek-reasoner">deepseek-reasoner</option>
+                    <label for="apiProvider">API 提供商:</label>
+                    <select id="apiProvider">
+                        <option value="deepseek">DeepSeek（文本优化）</option>
+                        <option value="zhipu">智谱 AI（文本优化 + 图像生成）</option>
                     </select>
+                    <small>选择要使用的 AI 服务提供商</small>
+                    </div>
+                    
+                    <!-- DeepSeek 配置 -->
+                    <div id="deepseekConfig" class="api-config">
+                        <h4>DeepSeek 配置</h4>
+                        <div class="form-group">
+                            <label for="deepseekApiKey">DeepSeek API Key:</label>
+                            <input type="password" id="deepseekApiKey" placeholder="输入你的 DeepSeek API Key">
+                            <small>获取 API Key: <a href="https://platform.deepseek.com/api_keys" target="_blank">DeepSeek 官网</a></small>
+                        </div>
+                        <div class="form-group">
+                        <label for="deepseekEndpoint">API 地址:</label>
+                        <input type="text" id="deepseekEndpoint" value="https://api.deepseek.com/chat/completions">
+                        </div>
+                        <div class="form-group">
+                        <label for="deepseekModel">模型:</label>
+                        <select id="deepseekModel">
+                            <option value="deepseek-chat">deepseek-chat</option>
+                            <option value="deepseek-reasoner">deepseek-reasoner</option>
+                        </select>
+                    </div>
+                    </div>
+                    
+                    <!-- 智谱 AI 配置 -->
+                    <div id="zhipuConfig" class="api-config" style="display: none;">
+                        <h4>智谱 AI 配置</h4>
+                        <div class="form-group">
+                            <label for="zhipuApiKey">智谱 API Key:</label>
+                            <input type="password" id="zhipuApiKey" placeholder="输入你的智谱 API Key">
+                            <small>获取 API Key: <a href="https://open.bigmodel.cn/usercenter/apikeys" target="_blank">智谱 AI 开放平台</a></small>
+                        </div>
+                        <div class="form-group">
+                            <label for="zhipuEndpoint">API 地址:</label>
+                            <input type="text" id="zhipuEndpoint" value="https://open.bigmodel.cn/api/paas/v4/chat/completions">
+                        </div>
+                        <div class="form-group">
+                            <label for="zhipuModel">模型:</label>
+                            <select id="zhipuModel">
+                                <option value="glm-4.5">GLM-4.5 (最新旗舰)</option>
+                                <option value="glm-4.5-air">GLM-4.5-Air (轻量级)</option>
+                                <option value="glm-4-plus">GLM-4-Plus (增强版)</option>
+                                <option value="glm-4">GLM-4 (标准版)</option>
+                                <option value="glm-4-air">GLM-4-Air</option>
+                                <option value="glm-4-flash">GLM-4-Flash (快速)</option>
+                                <option value="glm-4-long">GLM-4-Long (长文本)</option>
+                            </select>
+                        </div>
                 </div>
                 <div class="form-group">
                     <label for="systemPrompt">系统提示词:</label>
@@ -179,6 +227,81 @@
         </div>
     </div>
 
+    <!-- 图像生成模态框 -->
+    <div id="imageGenerationModal" class="modal" style="display: none;">
+        <div class="modal-content image-generation-modal">
+            <div class="modal-header">
+                <h3>AI 图像生成</h3>
+                <button id="closeImageGeneration" class="btn btn-icon" title="关闭">
+                    ✕
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="imagePrompt">描述提示词:</label>
+                    <textarea id="imagePrompt" placeholder="请描述您想要生成的图像，支持中英文..." rows="4"></textarea>
+                    <small class="form-help">提示：详细的描述能生成更准确的图像</small>
+                </div>
+    
+                <div class="form-group">
+                    <label for="imageModel">生成模型:</label>
+                    <select id="imageModel">
+                        <option value="cogview-4">CogView-4 (支持中文字符)</option>
+                        <option value="cogview-3">CogView-3 </option>
+                    </select>
+                </div>
+    
+                <div id="imagePreview" class="image-preview" style="display: none;">
+                    <div class="image-container">
+                        <img id="generatedImage" alt="生成的图像" />
+                        <div class="image-actions">
+                            <button id="insertImageBtn" class="btn btn-primary">插入到文档</button>
+                            <button id="downloadImageBtn" class="btn btn-secondary">下载图像</button>
+                            <button id="copyImageBtn" class="btn btn-secondary">复制图像</button>
+                        </div>
+                    </div>
+                    <div id="imageInfo" class="image-info"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="generateImageAction" class="btn btn-primary">
+                    <span class="btn-text">生成图像</span>
+                    <span class="btn-loading" style="display: none;">
+                        <div class="spinner-small"></div>
+                        生成中...
+                    </span>
+                </button>
+                <button id="clearImagePrompt" class="btn btn-secondary">清空</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 图像历史模态框 -->
+    <div id="imageHistoryModal" class="modal" style="display: none;">
+        <div class="modal-content image-history-modal">
+            <div class="modal-header">
+                <h3>图像生成历史</h3>
+                <button id="closeImageHistory" class="btn btn-icon" title="关闭">
+                    ✕
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="imageHistoryList" class="image-history-list">
+                    <div class="empty-history">
+                        <p>暂无图像生成历史</p>
+                        <button class="btn btn-primary" onclick="document.getElementById('generateImageBtn').click()">
+                            开始生成图像
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="clearImageHistory" class="btn btn-secondary">清空历史</button>
+                <button id="exportImageHistory" class="btn btn-secondary">导出历史</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 加载遮罩 -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
@@ -196,6 +319,7 @@
     <!-- 加载工具和服务 -->
     <script src="utils/markdown.js"></script>
     <script src="services/storage.js"></script>
+    <script src="services/cogview.js"></script>
     
     <!-- 加载组件 -->
     <script src="components/Editor.js"></script>
@@ -203,6 +327,7 @@
     <script src="components/FileTree.js"></script>
     <script src="components/TabManager.js"></script>
     <script src="components/ThemeSelector.js"></script>
+    <script src="components/ImageGenerator.js"></script>
     
     <!-- 主应用程序 -->
     <script src="renderer.js"></script>

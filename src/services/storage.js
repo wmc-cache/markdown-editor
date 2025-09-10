@@ -153,11 +153,32 @@ class StorageService {
   // 读取 API 设置
   loadApiSettings() {
     return this.get('apiSettings', {
-      apiKey: '',
-      endpoint: 'https://api.deepseek.com/chat/completions',
-      model: 'deepseek-chat',
+      provider: 'deepseek', // 默认使用 DeepSeek
+      deepseek: {
+        apiKey: '',
+        endpoint: 'https://api.deepseek.com/chat/completions',
+        model: 'deepseek-chat',
+        systemPrompt: '你是一个专业的文本优化助手。请帮我优化以下文本，让它更清晰、准确、易懂。保持原文的主要意思，但可以改进表达方式、语法和结构。'
+      },
+      zhipu: {
+        apiKey: '',
+        endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+        model: 'glm-4.5',
+        systemPrompt: '你是一个专业的文本优化助手。请帮我优化以下文本，让它更清晰、准确、易懂。保持原文的主要意思，但可以改进表达方式、语法和结构。'
+      },
       systemPrompt: '你是一个专业的文本优化助手。请帮我优化以下文本，让它更清晰、准确、易懂。保持原文的主要意思，但可以改进表达方式、语法和结构。'
     });
+  }
+  
+  // 获取当前使用的 API 配置
+  getCurrentApiConfig() {
+    const settings = this.loadApiSettings();
+    const provider = settings.provider || 'deepseek';
+    return {
+      provider: provider,
+      config: settings[provider],
+      systemPrompt: settings.systemPrompt
+    };
   }
 
   // 导出所有设置

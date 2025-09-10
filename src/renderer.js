@@ -104,6 +104,17 @@ class MarkdownEditorApp {
       this.saveSettings();
     });
     
+    // 初始化图像生成器
+    this.imageGenerator = new window.ImageGenerator();
+    
+    this.imageGenerator.setOnInsertImage((markdown) => {
+      this.insertImageToEditor(markdown);
+    });
+    
+    this.imageGenerator.setOnImageGenerated((imageData) => {
+      this.imageGenerator.saveToHistory(imageData);
+    });
+    
     // 初始化分隔条
     this.setupResizer();
   }
@@ -112,6 +123,7 @@ class MarkdownEditorApp {
     // 工具栏按钮
     document.getElementById('optimizeSelectedBtn').addEventListener('click', () => this.optimizeSelectedText());
     document.getElementById('optimizeAllBtn').addEventListener('click', () => this.optimizeAllText());
+    document.getElementById('generateImageBtn').addEventListener('click', () => this.showImageGenerator());
     document.getElementById('settingsBtn').addEventListener('click', () => this.showApiSettings());
     
     // API 设置模态框
@@ -130,6 +142,12 @@ class MarkdownEditorApp {
     // 预览面板按钮
     document.getElementById('closePreview').addEventListener('click', () => this.hidePreview());
     document.getElementById('showPreview').addEventListener('click', () => this.showPreview());
+    document.getElementById('showImageHistory').addEventListener('click', () => this.showImageHistory());
+    
+    // 图像历史模态框
+    document.getElementById('closeImageHistory').addEventListener('click', () => this.hideImageHistory());
+    document.getElementById('clearImageHistory').addEventListener('click', () => this.clearImageHistory());
+    document.getElementById('exportImageHistory').addEventListener('click', () => this.exportImageHistory());
     
     // 点击模态框外部关闭
     modal.addEventListener('click', (e) => {
@@ -189,6 +207,12 @@ class MarkdownEditorApp {
               } else {
                 this.optimizeSelectedText();
               }
+            }
+            break;
+          case 'i':
+            if (e.altKey) {
+              e.preventDefault();
+              this.showImageGenerator();
             }
             break;
         }
@@ -426,7 +450,7 @@ class MarkdownEditorApp {
     }
     
     const selection = this.editor.getSelection();
-    const optimizedText = await this.callDeepSeekAPI(selectedText);
+    const optimizedText = await this.callTextOptimizationAPI(selectedText);
     if (optimizedText) {
       this.showComparison(selectedText, optimizedText, true, selection.start, selection.end);
     }
@@ -445,7 +469,7 @@ class MarkdownEditorApp {
       return;
     }
     
-    const optimizedText = await this.callDeepSeekAPI(content);
+    const optimizedText = await this.callTextOptimizationAPI(content);
     if (optimizedText) {
       this.showComparison(content, optimizedText, false);
     }
@@ -514,20 +538,20 @@ class MarkdownEditorApp {
     return chunks.filter(chunk => chunk.trim().length > 0);
   }
 
-  async callDeepSeekAPI(text) {
+  async callTextOptimizationAPI(text) {
     const MAX_CHARS = 8000; // 单次处理的最大字符数
     const estimatedTokens = this.estimateTokens(text);
     
     // 检查文本长度
     if (text.length > MAX_CHARS || estimatedTokens > 6000) {
-      return await this.callDeepSeekAPIWithChunks(text);
+      return await this.callOptimizationAPIWithChunks(text);
     } else {
-      return await this.callSingleDeepSeekAPI(text);
+      return await this.callSingleOptimizationAPI(text);
     }
   }
 
   // 处理超长文本的分块API调用
-  async callDeepSeekAPIWithChunks(text) {
+  async callOptimizationAPIWithChunks(text) {
     const chunks = this.splitText(text, 3000);
     const loadingOverlay = document.getElementById('loadingOverlay');
     
@@ -557,7 +581,7 @@ class MarkdownEditorApp {
           loadingText.textContent = `正在优化第 ${i + 1}/${chunks.length} 段...`;
         }
         
-        const optimizedChunk = await this.callSingleDeepSeekAPI(chunks[i], false);
+        const optimizedChunk = await this.callSingleOptimizationAPI(chunks[i], false);
         if (optimizedChunk) {
           optimizedChunks.push(optimizedChunk);
         } else {
@@ -594,19 +618,27 @@ class MarkdownEditorApp {
   }
 
   // 单个API调用
-  async callSingleDeepSeekAPI(text, showOverlay = true) {
+  async callSingleOptimizationAPI(text, showOverlay = true) {
     if (showOverlay) {
       const loadingOverlay = document.getElementById('loadingOverlay');
       loadingOverlay.classList.add('show');
     }
     
     try {
-      const response = await axios.post(this.apiSettings.endpoint, {
-        model: this.apiSettings.model,
+      // 获取当前API配置
+      const currentConfig = window.storageService.getCurrentApiConfig();
+      const { provider, config, systemPrompt } = currentConfig;
+      
+      if (!config || !config.apiKey) {
+        throw new Error(`请先配置 ${provider === 'deepseek' ? 'DeepSeek' : '智谱'} API Key`);
+      }
+      
+      const response = await axios.post(config.endpoint, {
+        model: config.model,
         messages: [
           {
             role: "system",
-            content: this.apiSettings.systemPrompt
+            content: systemPrompt
           },
           {
             role: "user",
@@ -617,7 +649,7 @@ class MarkdownEditorApp {
         stream: false
       }, {
         headers: {
-          'Authorization': `Bearer ${this.apiSettings.apiKey}`,
+          'Authorization': `Bearer ${config.apiKey}`,
           'Content-Type': 'application/json'
         },
         timeout: 60000 // 增加超时时间到60秒
@@ -660,17 +692,61 @@ class MarkdownEditorApp {
   // API 设置
   showApiSettings() {
     const modal = document.getElementById('apiSettingsModal');
-    const apiKey = document.getElementById('apiKey');
-    const apiEndpoint = document.getElementById('apiEndpoint');
-    const model = document.getElementById('model');
-    const systemPrompt = document.getElementById('systemPrompt');
     
-    apiKey.value = this.apiSettings.apiKey;
-    apiEndpoint.value = this.apiSettings.endpoint;
-    model.value = this.apiSettings.model;
-    systemPrompt.value = this.apiSettings.systemPrompt;
+    // 加载当前设置
+    this.loadApiSettingsToUI();
+    
+    // 设置提供商切换事件
+    this.setupProviderSwitching();
     
     modal.classList.add('show');
+  }
+  
+  loadApiSettingsToUI() {
+    const settings = this.apiSettings;
+    
+    // 设置当前提供商
+    document.getElementById('apiProvider').value = settings.provider || 'deepseek';
+    
+    // 加载 DeepSeek 配置
+    if (settings.deepseek) {
+      document.getElementById('deepseekApiKey').value = settings.deepseek.apiKey || '';
+      document.getElementById('deepseekEndpoint').value = settings.deepseek.endpoint || 'https://api.deepseek.com/chat/completions';
+      document.getElementById('deepseekModel').value = settings.deepseek.model || 'deepseek-chat';
+    }
+    
+    // 加载智谱配置
+    if (settings.zhipu) {
+      document.getElementById('zhipuApiKey').value = settings.zhipu.apiKey || '';
+      document.getElementById('zhipuEndpoint').value = settings.zhipu.endpoint || 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+      document.getElementById('zhipuModel').value = settings.zhipu.model || 'glm-4-plus';
+    }
+    
+    // 加载系统提示词
+    document.getElementById('systemPrompt').value = settings.systemPrompt || '';
+    
+    // 显示对应的配置区域
+    this.switchProviderConfig(settings.provider || 'deepseek');
+  }
+  
+  setupProviderSwitching() {
+    const providerSelect = document.getElementById('apiProvider');
+    providerSelect.addEventListener('change', (e) => {
+      this.switchProviderConfig(e.target.value);
+    });
+  }
+  
+  switchProviderConfig(provider) {
+    const deepseekConfig = document.getElementById('deepseekConfig');
+    const zhipuConfig = document.getElementById('zhipuConfig');
+    
+    if (provider === 'deepseek') {
+      deepseekConfig.style.display = 'block';
+      zhipuConfig.style.display = 'none';
+    } else {
+      deepseekConfig.style.display = 'none';
+      zhipuConfig.style.display = 'block';
+    }
   }
   
   hideApiSettings() {
@@ -679,24 +755,53 @@ class MarkdownEditorApp {
   }
   
   saveApiSettings() {
-    const apiKey = document.getElementById('apiKey').value.trim();
-    const apiEndpoint = document.getElementById('apiEndpoint').value.trim();
-    const model = document.getElementById('model').value;
+    const provider = document.getElementById('apiProvider').value;
     const systemPrompt = document.getElementById('systemPrompt').value.trim();
     
-    if (!apiKey) {
-      alert('请输入 API Key');
+    // 获取当前设置
+    const settings = { ...this.apiSettings };
+    settings.provider = provider;
+    settings.systemPrompt = systemPrompt;
+    
+    // 保存 DeepSeek 配置
+    const deepseekApiKey = document.getElementById('deepseekApiKey').value.trim();
+    const deepseekEndpoint = document.getElementById('deepseekEndpoint').value.trim();
+    const deepseekModel = document.getElementById('deepseekModel').value;
+    
+    settings.deepseek = {
+      apiKey: deepseekApiKey,
+      endpoint: deepseekEndpoint,
+      model: deepseekModel,
+      systemPrompt: systemPrompt
+    };
+    
+    // 保存智谱配置
+    const zhipuApiKey = document.getElementById('zhipuApiKey').value.trim();
+    const zhipuEndpoint = document.getElementById('zhipuEndpoint').value.trim();
+    const zhipuModel = document.getElementById('zhipuModel').value;
+    
+    settings.zhipu = {
+      apiKey: zhipuApiKey,
+      endpoint: zhipuEndpoint,
+      model: zhipuModel,
+      systemPrompt: systemPrompt
+    };
+    
+    // 验证当前提供商的 API Key
+    const currentConfig = settings[provider];
+    if (!currentConfig.apiKey) {
+      alert(`请输入 ${provider === 'deepseek' ? 'DeepSeek' : '智谱'} API Key`);
       return;
     }
     
-    this.apiSettings = {
-      apiKey,
-      endpoint: apiEndpoint,
-      model,
-      systemPrompt
-    };
-    
+    this.apiSettings = settings;
     window.storageService.saveApiSettings(this.apiSettings);
+    
+    // 更新 CogView 服务的 API Key
+    if (provider === 'zhipu') {
+      window.cogviewService.setApiKey(zhipuApiKey);
+    }
+    
     this.updateUI();
     this.hideApiSettings();
     
@@ -704,9 +809,18 @@ class MarkdownEditorApp {
   }
   
   async testApiConnection() {
-    const apiKey = document.getElementById('apiKey').value.trim();
-    const apiEndpoint = document.getElementById('apiEndpoint').value.trim();
-    const model = document.getElementById('model').value;
+    const provider = document.getElementById('apiProvider').value;
+    let apiKey, apiEndpoint, model;
+    
+    if (provider === 'deepseek') {
+      apiKey = document.getElementById('deepseekApiKey').value.trim();
+      apiEndpoint = document.getElementById('deepseekEndpoint').value.trim();
+      model = document.getElementById('deepseekModel').value;
+    } else {
+      apiKey = document.getElementById('zhipuApiKey').value.trim();
+      apiEndpoint = document.getElementById('zhipuEndpoint').value.trim();
+      model = document.getElementById('zhipuModel').value;
+    }
     
     if (!apiKey) {
       alert('请先输入 API Key');
@@ -893,16 +1007,30 @@ class MarkdownEditorApp {
     
     const selection = this.editor.getSelection();
     const content = this.editor.getContent();
+    const currentConfig = window.storageService.getCurrentApiConfig();
     
     const optimizeSelectedBtn = document.getElementById('optimizeSelectedBtn');
     const optimizeAllBtn = document.getElementById('optimizeAllBtn');
+    const generateImageBtn = document.getElementById('generateImageBtn');
+    
+    // 检查当前提供商是否有配置的 API Key
+    const hasApiKey = currentConfig.config && currentConfig.config.apiKey;
     
     if (optimizeSelectedBtn) {
-      optimizeSelectedBtn.disabled = !selection.hasSelection || !this.apiSettings.apiKey;
+      optimizeSelectedBtn.disabled = !selection.hasSelection || !hasApiKey;
     }
     
     if (optimizeAllBtn) {
-      optimizeAllBtn.disabled = !content.trim() || !this.apiSettings.apiKey;
+      optimizeAllBtn.disabled = !content.trim() || !hasApiKey;
+    }
+    
+    if (generateImageBtn) {
+      // 图像生成只在智谱 AI 模式下启用
+      const canGenerateImage = currentConfig.provider === 'zhipu' && hasApiKey;
+      generateImageBtn.disabled = !canGenerateImage;
+      generateImageBtn.title = canGenerateImage ? 
+        'AI生成图像 (Ctrl+Alt+I)' : 
+        '图像生成需要智谱 AI - 点击查看设置';
     }
   }
   
@@ -922,6 +1050,190 @@ class MarkdownEditorApp {
     }
   }
   
+  // 图像生成功能
+  showImageGenerator() {
+    const currentConfig = window.storageService.getCurrentApiConfig();
+    
+    if (currentConfig.provider !== 'zhipu') {
+      alert('图像生成功能需要使用智谱 AI。请在设置中切换到智谱 AI 并配置 API Key。');
+      this.showApiSettings();
+      return;
+    }
+    
+    if (!currentConfig.config || !currentConfig.config.apiKey) {
+      alert('请先配置智谱 API Key');
+      this.showApiSettings();
+      return;
+    }
+    
+    // 设置图像生成服务的 API Key
+    window.cogviewService.setApiKey(currentConfig.config.apiKey);
+    
+    this.imageGenerator.show();
+  }
+  
+  insertImageToEditor(markdown) {
+    if (!this.editor) {
+      console.error('编辑器未初始化');
+      return;
+    }
+    
+    // 在光标位置插入图像 Markdown
+    const currentContent = this.editor.getContent();
+    const selection = this.editor.getSelection();
+    
+    // 确保图像前后有换行符
+    let imageMarkdown = markdown;
+    if (selection.start > 0 && !currentContent[selection.start - 1].match(/\n/)) {
+      imageMarkdown = '\n' + imageMarkdown;
+    }
+    if (!imageMarkdown.endsWith('\n')) {
+      imageMarkdown += '\n';
+    }
+    
+    // 插入图像
+    this.editor.insertTextAtCursor(imageMarkdown);
+    
+    // 标记文档已修改
+    this.setDirty(true);
+    
+    // 更新预览
+    this.preview.update(this.editor.getContent());
+  }
+  
+  // 图像历史管理
+  showImageHistory() {
+    const modal = document.getElementById('imageHistoryModal');
+    const historyList = document.getElementById('imageHistoryList');
+    
+    // 获取历史记录
+    const history = this.imageGenerator.getHistory();
+    
+    if (history.length === 0) {
+      historyList.innerHTML = `
+        <div class="empty-history">
+          <p>暂无图像生成历史</p>
+          <button class="btn btn-primary" onclick="document.getElementById('generateImageBtn').click(); document.getElementById('imageHistoryModal').style.display='none';">
+            开始生成图像
+          </button>
+        </div>
+      `;
+    } else {
+      historyList.innerHTML = history.map(item => this.renderHistoryItem(item)).join('');
+    }
+    
+    modal.style.display = 'flex';
+  }
+  
+  hideImageHistory() {
+    const modal = document.getElementById('imageHistoryModal');
+    modal.style.display = 'none';
+  }
+  
+  renderHistoryItem(item) {
+    const imageUrl = item.images[0].url;
+    const timestamp = new Date(item.timestamp).toLocaleString();
+    const model = item.model;
+    const prompt = item.prompt;
+    
+    return `
+      <div class="history-item">
+        <img src="${imageUrl}" alt="${prompt}" class="history-image" onclick="window.open('${imageUrl}', '_blank')">
+        <div class="history-details">
+          <div class="history-prompt">${prompt}</div>
+          <div class="history-meta">
+            <div>模型: ${model}</div>
+            <div>生成时间: ${timestamp}</div>
+          </div>
+          <div class="history-actions">
+            <button class="btn btn-primary" onclick="markdownEditor.insertImageFromHistory('${imageUrl}', '${prompt}')">
+              插入到文档
+            </button>
+            <button class="btn btn-secondary" onclick="markdownEditor.downloadHistoryImage('${imageUrl}', '${prompt}')">
+              下载
+            </button>
+            <button class="btn btn-secondary" onclick="markdownEditor.copyHistoryImageUrl('${imageUrl}')">
+              复制链接
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+  
+  insertImageFromHistory(imageUrl, altText) {
+    const markdown = window.cogviewService.generateMarkdownImage(imageUrl, altText);
+    this.insertImageToEditor(markdown);
+    this.hideImageHistory();
+  }
+  
+  downloadHistoryImage(imageUrl, prompt) {
+    const filename = `cogview_${prompt.substring(0, 20)}_${Date.now()}.png`;
+    window.cogviewService.downloadImage(imageUrl, filename)
+      .catch(error => {
+        console.error('下载失败:', error);
+        alert('下载失败: ' + error.message);
+      });
+  }
+  
+  copyHistoryImageUrl(imageUrl) {
+    navigator.clipboard.writeText(imageUrl)
+      .then(() => {
+        // 临时显示成功提示
+        const notification = document.createElement('div');
+        notification.textContent = '链接已复制到剪贴板';
+        notification.style.cssText = `
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background: var(--bg-ai);
+          color: white;
+          padding: 10px 20px;
+          border-radius: 5px;
+          z-index: 10000;
+        `;
+        document.body.appendChild(notification);
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, 2000);
+      })
+      .catch(error => {
+        console.error('复制失败:', error);
+        alert('复制失败');
+      });
+  }
+  
+  clearImageHistory() {
+    if (confirm('确定要清空所有图像生成历史吗？此操作不可恢复。')) {
+      this.imageGenerator.clearHistory();
+      this.showImageHistory(); // 刷新显示
+    }
+  }
+  
+  exportImageHistory() {
+    const history = this.imageGenerator.getHistory();
+    if (history.length === 0) {
+      alert('暂无历史记录可导出');
+      return;
+    }
+    
+    const exportData = {
+      exportTime: new Date().toISOString(),
+      version: '1.0',
+      history: history
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cogview_history_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   // 工具函数
   async readFileAsText(file) {
     return new Promise((resolve, reject) => {
