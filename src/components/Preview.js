@@ -40,22 +40,11 @@ class Preview {
         <div class="features">
           <h3>功能特性：</h3>
           <ul>
-            <li>🎨 实时 Markdown 预览</li>
-            <li>🤖 DeepSeek AI 提示词优化</li>
-            <li>🌙 明暗主题切换</li>
-            <li>💾 文件管理功能</li>
-            <li>⌨️ 丰富的快捷键支持</li>
-          </ul>
-        </div>
-        <div class="shortcuts">
-          <h3>快捷键：</h3>
-          <ul>
-            <li><kbd>Ctrl/Cmd + N</kbd> - 新建文件</li>
-            <li><kbd>Ctrl/Cmd + O</kbd> - 打开文件</li>
-            <li><kbd>Ctrl/Cmd + S</kbd> - 保存文件</li>
-            <li><kbd>Ctrl/Cmd + Shift + S</kbd> - 另存为</li>
-            <li><kbd>Ctrl/Cmd + Alt + O</kbd> - 优化选中文本</li>
-            <li><kbd>Ctrl/Cmd + Alt + A</kbd> - 优化全文</li>
+            <li>实时 Markdown 预览</li>
+            <li>DeepSeek AI 提示词优化</li>
+            <li>明暗主题切换</li>
+            <li>文件管理功能</li>
+            <li>丰富的快捷键支持</li>
           </ul>
         </div>
       </div>

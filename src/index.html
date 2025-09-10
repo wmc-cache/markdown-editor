@@ -14,10 +14,10 @@
         <div class="toolbar">
             <div class="toolbar-left">
                 <button id="optimizeSelectedBtn" class="btn btn-ai" title="优化选中文本 (Ctrl+Alt+O)">
-                    ✨ 优化选中
+                    优化选中
                 </button>
                 <button id="optimizeAllBtn" class="btn btn-ai" title="优化全文 (Ctrl+Alt+A)">
-                    🚀 优化全文
+                    优化全文
                 </button>
             </div>
             <div class="toolbar-right">
@@ -58,7 +58,7 @@
                         <div class="file-tree-empty">
                             <p>暂无打开的文件夹</p>
                             <button id="openFolderFromTree" class="btn btn-secondary">
-                                📁 选择文件夹
+                                选择文件夹
                             </button>
                         </div>
                     </div>
@@ -68,7 +68,7 @@
             <!-- 编辑器面板 -->
             <div class="editor-panel">
                 <div class="panel-header">
-                    <h3>📝 编辑器</h3>
+                    <h3>编辑器</h3>
                 </div>
                 <div id="editor" class="editor-container"></div>
             </div>
@@ -79,10 +79,9 @@
             <!-- 预览面板 -->
             <div class="preview-panel" id="previewPanel">
                 <div class="panel-header">
-                    <h3>👁️ 预览</h3>
-                    <button id="closePreview" class="btn btn-icon" title="关闭预览">
-                        ✕
-                    </button>
+                    <h3>预览
+                        <button id="closePreview" class="btn btn-icon" title="关闭预览"> ✕</button>
+                    </h3>
                 </div>
                 <div id="preview" class="preview-container">
                     <div class="empty-state">
@@ -91,11 +90,11 @@
                         <div class="features">
                             <h3>功能特性：</h3>
                             <ul>
-                                <li>🎨 实时 Markdown 预览</li>
-                                <li>🤖 DeepSeek AI 提示词优化</li>
-                                <li>🌙 明暗主题切换</li>
-                                <li>💾 文件管理功能</li>
-                                <li>⌨️ 丰富的快捷键支持</li>
+                                <li>实时 Markdown 预览</li>
+                                <li> DeepSeek AI 提示词优化</li>
+                                <li>明暗主题切换</li>
+                                <li>文件管理功能</li>
+                                <li>丰富的快捷键支持</li>
                             </ul>
                         </div>
                     </div>
@@ -164,11 +163,11 @@
             <div class="modal-body">
                 <div class="comparison-container">
                     <div class="comparison-panel">
-                        <h4>📝 优化前</h4>
+                        <h4>优化前</h4>
                         <div id="originalText" class="text-compare original"></div>
                     </div>
                     <div class="comparison-panel">
-                        <h4>✨ 优化后</h4>
+                        <h4>优化后</h4>
                         <div id="optimizedText" class="text-compare optimized"></div>
                     </div>
                 </div>
