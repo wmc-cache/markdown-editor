@@ -4,7 +4,7 @@
  */
 
 // 初始化 Markdown 解析器
-export function initMarkdownParser() {
+function initMarkdownParser() {
   if (!window.markdownit) {
     console.error('markdown-it library not loaded');
     return null;
@@ -106,7 +106,7 @@ function taskListPlugin(md) {
 }
 
 // Markdown 工具函数
-export const markdownUtils = {
+const markdownUtils = {
   // 转换 Markdown 为纯文本
   toPlainText(markdown) {
     // 移除 Markdown 语法
@@ -249,7 +249,8 @@ export const markdownUtils = {
   }
 };
 
-export default {
+// 将函数和工具挂载到全局对象
+window.markdownUtils = {
   initMarkdownParser,
   markdownUtils
 };

@@ -99,8 +99,8 @@ class TabManager {
     // 保存当前标签页的内容
     if (this.activeTabId && this.tabs.has(this.activeTabId)) {
       // 触发保存当前内容的事件
-      if (this.onBeforeTabSwitch) {
-        this.onBeforeTabSwitch(this.activeTabId);
+      if (this.onBeforeTabSwitchCallback) {
+        this.onBeforeTabSwitchCallback(this.activeTabId);
       }
     }
     
@@ -124,8 +124,8 @@ class TabManager {
     
     // 如果有未保存内容，询问是否保存
     if (tab.isDirty) {
-      if (this.onBeforeTabClose) {
-        const shouldClose = await this.onBeforeTabClose(tab);
+      if (this.onBeforeTabCloseCallback) {
+        const shouldClose = await this.onBeforeTabCloseCallback(tab);
         if (!shouldClose) return;
       }
     }
@@ -140,8 +140,8 @@ class TabManager {
         this.switchTab(remainingTabs[remainingTabs.length - 1]);
       } else {
         this.activeTabId = null;
-        if (this.onAllTabsClosed) {
-          this.onAllTabsClosed();
+        if (this.onAllTabsClosedCallback) {
+          this.onAllTabsClosedCallback();
         }
       }
     }
@@ -228,18 +228,18 @@ class TabManager {
   }
 
   // 设置标签页切换前回调
-  onBeforeTabSwitch(callback) {
-    this.onBeforeTabSwitch = callback;
+  setOnBeforeTabSwitch(callback) {
+    this.onBeforeTabSwitchCallback = callback;
   }
 
   // 设置标签页关闭前回调
-  onBeforeTabClose(callback) {
-    this.onBeforeTabClose = callback;
+  setOnBeforeTabClose(callback) {
+    this.onBeforeTabCloseCallback = callback;
   }
 
   // 设置所有标签页关闭后回调
-  onAllTabsClosed(callback) {
-    this.onAllTabsClosed = callback;
+  setOnAllTabsClosed(callback) {
+    this.onAllTabsClosedCallback = callback;
   }
 
   // 关闭所有标签页
@@ -271,4 +271,5 @@ class TabManager {
   }
 }
 
-export default TabManager;
+// 将类挂载到全局对象
+window.TabManager = TabManager;

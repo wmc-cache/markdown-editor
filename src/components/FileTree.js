@@ -14,7 +14,7 @@ class FileTree {
   }
 
   init() {
-    this.setupEventListeners();
+    // 初始化完成，事件监听器在 render 时设置
   }
 
   // 加载文件夹
@@ -255,4 +255,5 @@ class FileTree {
   }
 }
 
-export default FileTree;
+// 将类挂载到全局对象
+window.FileTree = FileTree;

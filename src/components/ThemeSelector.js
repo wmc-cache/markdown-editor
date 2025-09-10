@@ -99,8 +99,8 @@ class ThemeSelector {
     this.saveTheme();
     
     // 触发主题变更事件
-    if (this.onThemeChange) {
-      this.onThemeChange(themeId);
+    if (this.onThemeChangeCallback) {
+      this.onThemeChangeCallback(themeId);
     }
   }
 
@@ -175,8 +175,8 @@ class ThemeSelector {
   }
 
   // 设置主题变更回调
-  onThemeChange(callback) {
-    this.onThemeChange = callback;
+  setOnThemeChange(callback) {
+    this.onThemeChangeCallback = callback;
   }
 
   // 清理
@@ -188,4 +188,5 @@ class ThemeSelector {
   }
 }
 
-export default ThemeSelector;
+// 将类挂载到全局对象
+window.ThemeSelector = ThemeSelector;

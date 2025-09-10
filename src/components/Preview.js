@@ -162,4 +162,5 @@ class Preview {
   }
 }
 
-export default Preview;
+// 将类挂载到全局对象
+window.Preview = Preview;

@@ -197,7 +197,5 @@ class StorageService {
   }
 }
 
-// 创建单例实例
-const storageService = new StorageService();
-
-export default storageService;
+// 创建单例实例并挂载到全局对象
+window.storageService = new StorageService();

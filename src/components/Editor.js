@@ -51,12 +51,14 @@ class Editor {
     // 使用定时器检查选中文本变化
     let lastSelection = '';
     setInterval(() => {
-      if (this.editor) {
+      if (this.editor && this.onSelectionChange) {
         const currentSelection = this.getSelectedText();
         if (currentSelection !== lastSelection) {
           lastSelection = currentSelection;
-          if (this.onSelectionChange) {
+          try {
             this.onSelectionChange(this.getSelection());
+          } catch (error) {
+            console.error('Selection change callback error:', error);
           }
         }
       }
@@ -157,7 +159,7 @@ class Editor {
   }
 
   // 设置选择变化回调
-  onSelectionChange(callback) {
+  setOnSelectionChange(callback) {
     this.onSelectionChange = callback;
   }
 
@@ -211,4 +213,5 @@ class Editor {
   }
 }
 
-export default Editor;
+// 将类挂载到全局对象
+window.Editor = Editor;
