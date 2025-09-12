@@ -1,12 +1,14 @@
-# Markdown 编辑器 - 集成 DeepSeek AI
+# Markdown 编辑器 - AI 智能助手版
 
-这是一个基于 Electron 开发的 Markdown 编辑器，集成了 DeepSeek AI 模型，可以智能优化你的文本内容。
+这是一个基于 Electron 开发的现代化 Markdown 编辑器，集成了 DeepSeek AI 和智谱 CogView API，不仅可以智能优化文本内容，还支持 AI 图像生成功能。
 
 ## 功能特性
 
 - 🎨 **实时预览** - 三栏布局，文件树、编辑器、实时预览
 - 📁 **文件夹管理** - 打开文件夹，文件树浏览，快速切换文件
-- 🤖 **AI 优化** - 集成 DeepSeek AI，智能优化文本内容，支持长文本分块处理
+- 🤖 **AI 文本优化** - 集成 DeepSeek AI，智能优化文本内容，支持长文本分块处理
+- 🎨 **AI 图像生成** - 集成智谱 CogView API，根据文本描述生成高质量图像
+- 🖼️ **图像管理** - 图像生成历史记录，支持图像预览和管理
 - 🌙 **主题切换** - 支持明亮和暗色主题
 - 💾 **文件管理** - 新建、打开、保存 Markdown 文件
 - 📑 **多标签支持** - 同时编辑多个文档，标签管理
@@ -76,42 +78,66 @@ npm run build:all
 - 右侧会实时显示预览效果
 - 支持完整的 Markdown 语法
 
-### 2. AI 优化功能
+### 2. AI 文本优化功能
 1. 点击设置按钮（⚙️）配置 DeepSeek API
-2. 输入你的 API Key
+2. 输入你的 DeepSeek API Key
 3. 选择文本后点击"优化选中"或点击"优化全文"
 4. AI 会自动优化你的文本内容
 
-### 3. 文件操作
+### 3. AI 图像生成功能
+1. 在设置中配置智谱 API Key
+2. 点击工具栏的"🎨 生成图像"按钮
+3. 输入图像描述提示词
+4. 选择生成模型（支持 CogView-4 等）
+5. 点击生成按钮，AI 会根据描述创建图像
+6. 生成的图像可以直接插入到文档中
+7. 点击"🖼️"按钮查看图像生成历史
+
+### 4. 文件操作
 - `Ctrl/Cmd + N` - 新建文件
 - `Ctrl/Cmd + O` - 打开文件
 - `Ctrl/Cmd + Shift + O` - 打开文件夹
 - `Ctrl/Cmd + S` - 保存文件
 - `Ctrl/Cmd + Shift + S` - 另存为
 
-### 4. 文件夹管理
+### 5. 文件夹管理
 - 点击工具栏的"📁 打开文件夹"按钮选择文件夹
 - 左侧文件树显示所有 Markdown 文件（.md、.markdown、.txt）
 - 点击文件可直接切换编辑
 - 右键文件可在文件管理器中显示
 - 点击"◀"按钮可隐藏/显示文件树
 
-### 5. AI 优化快捷键
+### 6. AI 功能快捷键
 - `Ctrl/Cmd + Alt + O` - 优化选中文本
 - `Ctrl/Cmd + Alt + A` - 优化全文
+- `Ctrl/Cmd + Alt + I` - 打开图像生成器
 
-## DeepSeek API 配置
+## AI API 配置
+
+### DeepSeek API 配置（文本优化功能）
 
 1. 访问 [DeepSeek 开放平台](https://platform.deepseek.com)
 2. 注册并登录账户
 3. 创建 API Key
-4. 在应用中点击设置按钮配置 API Key
+4. 在应用中点击设置按钮配置 DeepSeek API
 
-### API 设置选项
+**DeepSeek API 设置选项:**
 - **API Key**: 你的 DeepSeek API 密钥
 - **API 地址**: 默认为 `https://api.deepseek.com/chat/completions`
 - **模型**: 推荐使用 `deepseek-chat`
 - **系统提示词**: 自定义 AI 优化的方向和风格
+
+### 智谱 API 配置（图像生成功能）
+
+1. 访问 [智谱开放平台](https://open.bigmodel.cn/)
+2. 注册并登录账户  
+3. 创建 API Key
+4. 在应用设置中配置智谱 API Key
+
+**智谱 API 设置选项:**
+- **API Key**: 你的智谱 API 密钥
+- **模型**: 支持 CogView-4 等图像生成模型
+- **图像尺寸**: 支持多种分辨率选择
 
 ## 项目结构
 
@@ -131,7 +157,14 @@ markdown-editor-deepseek/
 │   │   ├── Preview.js      # 预览组件
 │   │   ├── FileTree.js     # 文件树组件
 │   │   ├── TabManager.js   # 标签管理
-│   │   └── ThemeSelector.js # 主题选择
+│   │   ├── ThemeSelector.js # 主题选择
+│   │   └── ImageGenerator.js # AI图像生成组件
+│   ├── services/           # 服务模块
+│   │   ├── deepseek.js     # DeepSeek API 服务
+│   │   ├── cogview.js      # 智谱 CogView API 服务
+│   │   └── storage.js      # 本地存储服务
+│   ├── utils/
+│   │   └── markdown.js     # Markdown 工具函数
 │   └── styles/
 │       └── main.css        # 样式文件
 ├── dist/                    # 打包输出目录
@@ -148,15 +181,23 @@ markdown-editor-deepseek/
 - **markdown-it** - Markdown 解析和渲染
 - **axios** - HTTP 请求库
 - **DeepSeek API** - AI 文本优化服务
+- **智谱 CogView API** - AI 图像生成服务
 - **electron-builder** - 跨平台打包工具
 
 ## 常见问题
 
-### Q: AI 优化功能无法使用？
+### Q: AI 文本优化功能无法使用？
 A: 请检查以下几点：
-- 确认 API Key 配置正确
+- 确认 DeepSeek API Key 配置正确
 - 检查网络连接
-- 验证 API 配额是否充足
+- 验证 DeepSeek API 配额是否充足
+
+### Q: AI 图像生成功能无法使用？
+A: 请检查以下几点：
+- 确认智谱 API Key 配置正确
+- 检查网络连接状态
+- 验证智谱 API 配额是否充足
+- 确认提示词描述清晰合适
 
 ### Q: 应用无法启动？
 A: 请确保：
@@ -196,7 +237,9 @@ A: 尝试：
 修改 `src/styles/main.css` 中的 CSS 变量来自定义主题颜色。
 
 ### 扩展 AI 功能
-在 `src/renderer.js` 中的 AI 相关方法中添加新功能，支持文本分块处理大型文档。
+- **文本优化**: 在 `src/services/deepseek.js` 中扩展文本处理功能，支持文本分块处理大型文档
+- **图像生成**: 在 `src/services/cogview.js` 中添加更多图像生成参数和模型选择
+- **AI 组件**: 在 `src/components/` 中添加新的 AI 功能组件
 
 ### 打包配置
 修改 `package.json` 中的 `build` 字段来调整打包设置：

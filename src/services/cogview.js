@@ -17,10 +17,40 @@ class CogViewService {
   }
 
   /**
+   * 确保使用正确的智谱 API Key
+   */
+  ensureZhipuApiKey() {
+    if (!window.storageService) {
+      throw new Error('存储服务未初始化');
+    }
+    
+    const apiSettings = window.storageService.loadApiSettings();
+    
+    if (!apiSettings.zhipu) {
+      throw new Error('请先在设置中配置智谱 API Key');
+    }
+    
+    const zhipuApiKey = apiSettings.zhipu.apiKey ? apiSettings.zhipu.apiKey.trim() : '';
+    
+    if (!zhipuApiKey || zhipuApiKey.length === 0) {
+      throw new Error('请先在设置中配置智谱 API Key');
+    }
+    
+    // 验证 API Key 字符是否有效（只允许 ASCII 字符）
+    if (!/^[\x00-\x7F]*$/.test(zhipuApiKey)) {
+      throw new Error('API Key 格式无效，请确保只包含英文字符和数字');
+    }
+    
+    this.setApiKey(zhipuApiKey);
+    return zhipuApiKey;
+  }
+
+  /**
    * 生成图像
    */
   async generateImage(prompt, options = {}) {
-    console.log('CogView API Key:', this.apiKey);
+    this.ensureZhipuApiKey();
+    
     if (!this.apiKey) {
       throw new Error('请先配置智谱 API Key');
     }
@@ -58,7 +88,6 @@ class CogViewService {
 
       return this.processImageResult(result);
     } catch (error) {
-      console.error('CogView API 调用失败:', error);
       throw error;
     }
   }
@@ -86,7 +115,7 @@ class CogViewService {
    * 生成图像 ID
    */
   generateImageId() {
-    return `cogview_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `cogview_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   /**
@@ -176,6 +205,7 @@ class CogViewService {
       { id: 'cogview-4', name: 'CogView-4', description: '最新版本，支持中文字符生成' }
     ];
   }
+
 }
 
 // 全局实例

@@ -91,15 +91,13 @@ class ImageGenerator {
     this.modal.style.display = 'flex';
     this.promptInput.focus();
     
-    // 确保有 API Key
-    const apiSettings = window.storageService.loadApiSettings();
-    if (!apiSettings.apiKey) {
-      this.showError('请先在设置中配置智谱 API Key');
+    // 检查智谱 API Key
+    try {
+      window.cogviewService.ensureZhipuApiKey();
+    } catch (error) {
+      this.showError(error.message);
       return;
     }
-    
-    // 设置 API Key
-    window.cogviewService.setApiKey(apiSettings.apiKey);
   }
   
   hide() {
@@ -143,7 +141,6 @@ class ImageGenerator {
         this.showError('未生成任何图像');
       }
     } catch (error) {
-      console.error('图像生成失败:', error);
       this.showError(`生成失败: ${error.message}`);
     } finally {
       this.setGeneratingState(false);
@@ -241,7 +238,6 @@ class ImageGenerator {
       
       await window.cogviewService.downloadImage(imageUrl, filename);
     } catch (error) {
-      console.error('下载图像失败:', error);
       this.showError('下载图像失败');
     }
   }
@@ -263,8 +259,6 @@ class ImageGenerator {
       // 显示成功提示
       this.showSuccess('图像已复制到剪贴板');
     } catch (error) {
-      console.error('复制图像失败:', error);
-      
       // 降级方案：复制图像 URL
       try {
         await navigator.clipboard.writeText(this.currentImageData.images[0].url);
