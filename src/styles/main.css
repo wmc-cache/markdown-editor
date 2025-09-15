@@ -1513,3 +1513,129 @@ body.resizing {
     color: var(--text-primary);
     font-weight: 600;
 }
+
+/* AI 优化进度模态框样式 */
+.optimization-progress-modal {
+    max-width: 800px;
+    width: 90vw;
+    max-height: 80vh;
+}
+
+.optimization-progress-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.progress-stats {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.progress-container {
+    margin-bottom: 1.5rem;
+    position: relative;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background-color: var(--bg-tertiary);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+}
+
+.progress-text {
+    position: absolute;
+    top: -25px;
+    right: 0;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.streaming-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    max-height: 400px;
+}
+
+.content-panel h4 {
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.content-preview {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
+    padding: 1rem;
+    min-height: 150px;
+    max-height: 350px;
+    overflow-y: auto;
+    font-family: 'SF Mono', 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.content-preview.streaming {
+    position: relative;
+}
+
+.streaming-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
+.streaming-cursor::after {
+    content: '|';
+    animation: blink 1s infinite;
+    color: var(--primary-color);
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .streaming-content {
+        grid-template-columns: 1fr;
+    }
+
+    .optimization-progress-modal {
+        width: 95vw;
+        max-height: 90vh;
+    }
+}

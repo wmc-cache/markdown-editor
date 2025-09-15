@@ -132,6 +132,9 @@ class MarkdownEditorApp {
 
     // 初始化查找替换功能
     this.findReplace = new window.FindReplace(this.editor);
+
+    // 初始化流式优化器
+    this.streamingOptimizer = new window.StreamingOptimizer();
     
     // 初始化分隔条
     this.setupResizer();
@@ -485,9 +488,22 @@ class MarkdownEditorApp {
     }
 
     const selection = this.editor.getSelection();
-    const optimizedText = await this.callTextOptimizationAPI(selectedText);
-    if (optimizedText) {
-      this.showComparison(selectedText, optimizedText, true, selection.start, selection.end);
+
+    // 使用流式优化器
+    this.streamingOptimizer.show(selectedText, (optimizedText) => {
+      // 应用优化结果到选中文本
+      this.editor.setSelection(selection.start, selection.end);
+      this.editor.replaceSelectedText(optimizedText);
+    });
+
+    // 开始优化处理
+    try {
+      const optimizedText = await this.callStreamingOptimizationAPI(selectedText);
+      if (optimizedText) {
+        this.streamingOptimizer.completeStreaming(optimizedText);
+      }
+    } catch (error) {
+      this.streamingOptimizer.showError(error.message);
     }
   }
   
@@ -505,10 +521,22 @@ class MarkdownEditorApp {
       this.showApiSettings();
       return;
     }
-    
-    const optimizedText = await this.callTextOptimizationAPI(content);
-    if (optimizedText) {
-      this.showComparison(content, optimizedText, false);
+
+    // 使用流式优化器
+    this.streamingOptimizer.show(content, (optimizedText) => {
+      // 替换全部内容
+      this.editor.setContent(optimizedText);
+      this.markDirty();
+    });
+
+    // 开始优化处理
+    try {
+      const optimizedText = await this.callStreamingOptimizationAPI(content);
+      if (optimizedText) {
+        this.streamingOptimizer.completeStreaming(optimizedText);
+      }
+    } catch (error) {
+      this.streamingOptimizer.showError(error.message);
     }
   }
   
@@ -651,6 +679,111 @@ class MarkdownEditorApp {
       if (loadingText) {
         loadingText.textContent = '正在处理...';
       }
+    }
+  }
+
+  // 流式优化API调用
+  async callStreamingOptimizationAPI(text) {
+    // 获取当前API配置
+    const currentConfig = await window.storageService.getCurrentApiConfig();
+    const { provider, config, systemPrompt } = currentConfig;
+
+    if (!config || !config.apiKey) {
+      throw new Error(`请先配置 ${provider === 'deepseek' ? 'DeepSeek' : '智谱'} API Key`);
+    }
+
+    this.streamingOptimizer.updateProgress(20, '正在连接API服务...');
+
+    try {
+      // 创建AbortController用于取消请求
+      const abortController = new AbortController();
+      this.streamingOptimizer.setAbortController(abortController);
+
+      // 使用 fetch 进行真正的流式处理
+      const response = await fetch(config.endpoint, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${config.apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: config.model,
+          messages: [
+            {
+              role: "system",
+              content: systemPrompt
+            },
+            {
+              role: "user",
+              content: text
+            }
+          ],
+          max_tokens: 4000,
+          stream: true  // 启用流式响应
+        }),
+        signal: abortController.signal
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      this.streamingOptimizer.updateProgress(30, '开始接收响应...');
+
+      // 处理流式响应
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = '';
+
+      this.streamingOptimizer.setStreamContent(''); // 清空内容开始接收
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+
+            if (data === '[DONE]') {
+              this.streamingOptimizer.completeStreaming(fullContent);
+              return fullContent;
+            }
+
+            try {
+              const parsed = JSON.parse(data);
+              const content = parsed.choices?.[0]?.delta?.content;
+
+              if (content) {
+                fullContent += content;
+                this.streamingOptimizer.setStreamContent(fullContent + '|');
+
+                // 更新进度（基于内容长度估算）
+                const estimatedProgress = Math.min(90, 30 + (fullContent.length / text.length) * 50);
+                this.streamingOptimizer.updateProgress(estimatedProgress, '正在生成内容...');
+              }
+            } catch (e) {
+              // 忽略JSON解析错误，继续处理
+            }
+          }
+        }
+      }
+
+      this.streamingOptimizer.completeStreaming(fullContent);
+      return fullContent;
+
+    } catch (error) {
+      // 如果流式处理失败，回退到普通API调用
+      console.warn('流式处理失败，回退到普通调用:', error);
+      this.streamingOptimizer.updateProgress(30, '回退到普通模式...');
+
+      const response = await this.callSingleOptimizationAPI(text, false);
+      this.streamingOptimizer.simulateStreaming(response, 1000);
+      return response;
     }
   }
 

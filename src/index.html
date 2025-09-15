@@ -331,6 +331,41 @@
         </div>
     </div>
 
+    <!-- AI优化进度模态框 -->
+    <div id="optimizationProgressModal" class="modal" style="display: none;">
+        <div class="modal-content optimization-progress-modal">
+            <div class="modal-header">
+                <h3>AI 优化进行中</h3>
+                <div class="progress-stats">
+                    <span id="optimizationStatus">正在连接服务...</span>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <div id="progressText" class="progress-text">0%</div>
+                </div>
+
+                <div class="streaming-content">
+                    <div class="content-panel">
+                        <h4>原始文本</h4>
+                        <div id="originalContent" class="content-preview"></div>
+                    </div>
+                    <div class="content-panel">
+                        <h4>优化结果 <span id="streamingIndicator" class="streaming-dot">●</span></h4>
+                        <div id="streamingContent" class="content-preview streaming"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="cancelOptimization" class="btn btn-secondary">取消</button>
+                <button id="applyStreamingResult" class="btn btn-primary" style="display: none;">应用结果</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 加载遮罩 -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
@@ -358,6 +393,7 @@
     <script src="components/ThemeSelector.js"></script>
     <script src="components/ImageGenerator.js"></script>
     <script src="components/FindReplace.js"></script>
+    <script src="components/StreamingOptimizer.js"></script>
 
     <!-- 主应用程序 -->
     <script src="renderer.js"></script>
