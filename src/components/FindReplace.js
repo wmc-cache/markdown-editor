@@ -58,6 +58,12 @@ class FindReplace {
         }
       } else if (e.key === 'Escape') {
         this.hide();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        this.findNext();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        this.findPrevious();
       }
     });
 
@@ -68,6 +74,12 @@ class FindReplace {
         this.replaceNext();
       } else if (e.key === 'Escape') {
         this.hide();
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        this.findNext();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        this.findPrevious();
       }
     });
 
@@ -145,9 +157,10 @@ class FindReplace {
       this.highlightMatches();
       this.updateResults();
 
+      // 只在有匹配项时设置索引，但不自动选择
       if (matches.length > 0) {
         this.currentMatchIndex = 0;
-        this.selectMatch(0);
+        // 不自动选择匹配项，避免焦点跳转
       }
     } catch (error) {
       console.error('查找错误:', error);
@@ -200,13 +213,17 @@ class FindReplace {
     // 清除高亮显示
   }
 
-  selectMatch(index) {
+  selectMatch(index, shouldFocus = false) {
     if (index < 0 || index >= this.currentMatches.length) {
       return;
     }
 
     const match = this.currentMatches[index];
-    this.editor.setSelection(match.start, match.end);
+    if (shouldFocus) {
+      this.editor.setSelection(match.start, match.end);
+    } else {
+      this.editor.setSelectionWithoutFocus(match.start, match.end);
+    }
     this.currentMatchIndex = index;
     this.updateResults();
   }
@@ -216,8 +233,13 @@ class FindReplace {
       return;
     }
 
-    const nextIndex = (this.currentMatchIndex + 1) % this.currentMatches.length;
-    this.selectMatch(nextIndex);
+    // 如果当前没有选中任何匹配项，从第一个开始
+    if (this.currentMatchIndex === -1) {
+      this.selectMatch(0, true);
+    } else {
+      const nextIndex = (this.currentMatchIndex + 1) % this.currentMatches.length;
+      this.selectMatch(nextIndex, true); // 用户明确导航时聚焦编辑器
+    }
   }
 
   findPrevious() {
@@ -225,10 +247,15 @@ class FindReplace {
       return;
     }
 
-    const prevIndex = this.currentMatchIndex <= 0
-      ? this.currentMatches.length - 1
-      : this.currentMatchIndex - 1;
-    this.selectMatch(prevIndex);
+    // 如果当前没有选中任何匹配项，从最后一个开始
+    if (this.currentMatchIndex === -1) {
+      this.selectMatch(this.currentMatches.length - 1, true);
+    } else {
+      const prevIndex = this.currentMatchIndex <= 0
+        ? this.currentMatches.length - 1
+        : this.currentMatchIndex - 1;
+      this.selectMatch(prevIndex, true); // 用户明确导航时聚焦编辑器
+    }
   }
 
   replaceNext() {

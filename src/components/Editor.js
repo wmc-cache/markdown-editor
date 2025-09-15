@@ -164,15 +164,24 @@ class Editor {
   }
 
   // 设置选择范围
-  setSelection(start, end) {
+  setSelection(start, end, shouldFocus = true) {
     this.editor.setSelectionRange(start, end);
-    this.editor.focus();
+    if (shouldFocus) {
+      this.editor.focus();
+    }
   }
 
   // 设置光标位置
-  setCursor(position) {
+  setCursor(position, shouldFocus = true) {
     this.editor.setSelectionRange(position, position);
-    this.editor.focus();
+    if (shouldFocus) {
+      this.editor.focus();
+    }
+  }
+
+  // 设置选择范围但不聚焦
+  setSelectionWithoutFocus(start, end) {
+    this.editor.setSelectionRange(start, end);
   }
 
   // 在光标位置插入文本

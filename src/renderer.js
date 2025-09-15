@@ -993,8 +993,10 @@ class MarkdownEditorApp {
 
     previewPanel.style.display = 'flex';
     resizer.style.display = 'block';
-    editorPanel.style.flex = '0 0 50%';
-    previewPanel.style.flex = '0 0 50%';
+
+    // 恢复默认的 flex 设置，保持和初始状态一致
+    editorPanel.style.flex = '1';
+    previewPanel.style.flex = '1';
 
     // 更新按钮文本和提示
     togglePreviewBtn.title = '隐藏预览';
