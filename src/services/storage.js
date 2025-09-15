@@ -248,10 +248,11 @@ class StorageService {
   async getCurrentApiConfig() {
     const settings = await this.loadApiSettings();
     const provider = settings.provider || 'deepseek';
+    const defaultSystemPrompt = '你是一个专业的文本优化助手。请帮我优化以下文本，让它更清晰、准确、易懂。保持原文的主要意思，但可以改进表达方式、语法和结构。';
     return {
       provider: provider,
       config: settings[provider],
-      systemPrompt: settings.systemPrompt
+      systemPrompt: settings.systemPrompt || defaultSystemPrompt
     };
   }
 

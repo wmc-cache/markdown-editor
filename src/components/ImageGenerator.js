@@ -87,13 +87,13 @@ class ImageGenerator {
     });
   }
   
-  show() {
+  async show() {
     this.modal.style.display = 'flex';
     this.promptInput.focus();
-    
+
     // 检查智谱 API Key
     try {
-      window.cogviewService.ensureZhipuApiKey();
+      await window.cogviewService.ensureZhipuApiKey();
     } catch (error) {
       this.showError(error.message);
       return;

@@ -19,12 +19,12 @@ class CogViewService {
   /**
    * 确保使用正确的智谱 API Key
    */
-  ensureZhipuApiKey() {
+  async ensureZhipuApiKey() {
     if (!window.storageService) {
       throw new Error('存储服务未初始化');
     }
-    
-    const apiSettings = window.storageService.loadApiSettings();
+
+    const apiSettings = await window.storageService.loadApiSettings();
     
     if (!apiSettings.zhipu) {
       throw new Error('请先在设置中配置智谱 API Key');
@@ -49,7 +49,7 @@ class CogViewService {
    * 生成图像
    */
   async generateImage(prompt, options = {}) {
-    this.ensureZhipuApiKey();
+    await this.ensureZhipuApiKey();
     
     if (!this.apiKey) {
       throw new Error('请先配置智谱 API Key');

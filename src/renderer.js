@@ -20,7 +20,7 @@ class MarkdownEditorApp {
     this.isPreviewVisible = true;
     
     // API 设置
-    this.apiSettings = window.storageService.loadApiSettings();
+    this.apiSettings = {};
     
     // 优化数据
     this.optimizationData = {
@@ -47,6 +47,9 @@ class MarkdownEditorApp {
     // 初始化 Markdown 解析器
     this.markdownParser = window.markdownUtils.initMarkdownParser();
 
+    // 加载 API 设置
+    this.apiSettings = await window.storageService.loadApiSettings();
+
     // 初始化组件
     this.initComponents();
 
@@ -60,7 +63,7 @@ class MarkdownEditorApp {
     this.loadAutoSaveSettings();
 
     // 初始化界面状态
-    this.updateUI();
+    await this.updateUI();
 
     // 设置对比模态框
     this.setupComparisonModal();
@@ -472,13 +475,15 @@ class MarkdownEditorApp {
       alert('请先选择要优化的文本');
       return;
     }
-    
-    if (!this.apiSettings.apiKey) {
-      alert('请先配置 DeepSeek API Key');
+
+    // 检查API配置
+    const currentConfig = await window.storageService.getCurrentApiConfig();
+    if (!currentConfig.config || !currentConfig.config.apiKey) {
+      alert(`请先配置 ${currentConfig.provider === 'deepseek' ? 'DeepSeek' : '智谱'} API Key`);
       this.showApiSettings();
       return;
     }
-    
+
     const selection = this.editor.getSelection();
     const optimizedText = await this.callTextOptimizationAPI(selectedText);
     if (optimizedText) {
@@ -492,9 +497,11 @@ class MarkdownEditorApp {
       alert('当前文档为空');
       return;
     }
-    
-    if (!this.apiSettings.apiKey) {
-      alert('请先配置 DeepSeek API Key');
+
+    // 检查API配置
+    const currentConfig = await window.storageService.getCurrentApiConfig();
+    if (!currentConfig.config || !currentConfig.config.apiKey) {
+      alert(`请先配置 ${currentConfig.provider === 'deepseek' ? 'DeepSeek' : '智谱'} API Key`);
       this.showApiSettings();
       return;
     }
@@ -653,13 +660,15 @@ class MarkdownEditorApp {
       const loadingOverlay = document.getElementById('loadingOverlay');
       loadingOverlay.classList.add('show');
     }
-    
+
     try {
       // 获取当前API配置
-      const currentConfig = window.storageService.getCurrentApiConfig();
+      const currentConfig = await window.storageService.getCurrentApiConfig();
+      console.log('当前API配置：', currentConfig); // 调试输出
       const { provider, config, systemPrompt } = currentConfig;
-      
+
       if (!config || !config.apiKey) {
+        console.error('配置检查失败：', { provider, config }); // 调试输出
         throw new Error(`请先配置 ${provider === 'deepseek' ? 'DeepSeek' : '智谱'} API Key`);
       }
       
@@ -753,7 +762,8 @@ class MarkdownEditorApp {
     }
     
     // 加载系统提示词
-    document.getElementById('systemPrompt').value = settings.systemPrompt || '';
+    const defaultSystemPrompt = '你是一个专业的文本优化助手。请帮我优化以下文本，让它更清晰、准确、易懂。保持原文的主要意思，但可以改进表达方式、语法和结构。';
+    document.getElementById('systemPrompt').value = settings.systemPrompt || defaultSystemPrompt;
     
     // 显示对应的配置区域
     this.switchProviderConfig(settings.provider || 'deepseek');
@@ -784,7 +794,7 @@ class MarkdownEditorApp {
     modal.classList.remove('show');
   }
   
-  saveApiSettings() {
+  async saveApiSettings() {
     const provider = document.getElementById('apiProvider').value;
     const systemPrompt = document.getElementById('systemPrompt').value.trim();
     
@@ -825,7 +835,8 @@ class MarkdownEditorApp {
     }
     
     this.apiSettings = settings;
-    window.storageService.saveApiSettings(this.apiSettings);
+    console.log('保存API设置：', settings); // 调试输出
+    await window.storageService.saveApiSettings(this.apiSettings);
     
     // 更新 CogView 服务的 API Key
     if (provider === 'zhipu') {
@@ -1022,9 +1033,9 @@ class MarkdownEditorApp {
   }
   
   // UI 更新
-  updateUI() {
+  async updateUI() {
     this.updateStatus();
-    this.updateToolbar();
+    await this.updateToolbar();
   }
   
   updateStatus() {
@@ -1046,14 +1057,14 @@ class MarkdownEditorApp {
     lineCount.textContent = `第 ${stats.currentLine} 行 / 共 ${stats.lineCount} 行`;
   }
   
-  updateToolbar() {
+  async updateToolbar() {
     if (!this.editor) {
       return;
     }
-    
+
     const selection = this.editor.getSelection();
     const content = this.editor.getContent();
-    const currentConfig = window.storageService.getCurrentApiConfig();
+    const currentConfig = await window.storageService.getCurrentApiConfig();
     
     const optimizeSelectedBtn = document.getElementById('optimizeSelectedBtn');
     const optimizeAllBtn = document.getElementById('optimizeAllBtn');
@@ -1104,8 +1115,8 @@ class MarkdownEditorApp {
   }
   
   // 图像生成功能
-  showImageGenerator() {
-    const currentConfig = window.storageService.getCurrentApiConfig();
+  async showImageGenerator() {
+    const currentConfig = await window.storageService.getCurrentApiConfig();
     
     if (currentConfig.provider !== 'zhipu') {
       alert('图像生成功能需要使用智谱 AI。请在设置中切换到智谱 AI 并配置 API Key。');
@@ -1121,8 +1132,8 @@ class MarkdownEditorApp {
     
     // 设置图像生成服务的 API Key
     window.cogviewService.setApiKey(currentConfig.config.apiKey);
-    
-    this.imageGenerator.show();
+
+    await this.imageGenerator.show();
   }
   
   insertImageToEditor(markdown) {
