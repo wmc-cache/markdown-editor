@@ -163,6 +163,18 @@ class Editor {
     this.onSelectionChange = callback;
   }
 
+  // 设置选择范围
+  setSelection(start, end) {
+    this.editor.setSelectionRange(start, end);
+    this.editor.focus();
+  }
+
+  // 设置光标位置
+  setCursor(position) {
+    this.editor.setSelectionRange(position, position);
+    this.editor.focus();
+  }
+
   // 在光标位置插入文本
   insertTextAtCursor(text) {
     const cursorPos = this.editor.selectionStart;

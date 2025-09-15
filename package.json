@@ -10,7 +10,11 @@
     "build:mac": "electron-builder --mac",
     "build:win": "electron-builder --win",
     "build:all": "electron-builder --mac --win",
-    "dev": "electron . --dev"
+    "dev": "electron . --dev",
+    "lint": "eslint main/ src/ preload.js",
+    "lint:fix": "eslint main/ src/ preload.js --fix",
+    "format": "prettier --write main/ src/ preload.js",
+    "format:check": "prettier --check main/ src/ preload.js"
   },
   "keywords": ["electron", "markdown", "deepseek", "editor"],
   "author": "用户",

@@ -30,6 +30,15 @@ class MarkdownEditorApp {
       selectionStart: 0,
       selectionEnd: 0
     };
+
+    // 自动保存配置
+    this.autoSave = {
+      enabled: true,
+      interval: 30000, // 30秒间隔
+      timer: null,
+      lastSaveTime: 0,
+      pendingSave: false
+    };
     
     this.init();
   }
@@ -37,19 +46,22 @@ class MarkdownEditorApp {
   async init() {
     // 初始化 Markdown 解析器
     this.markdownParser = window.markdownUtils.initMarkdownParser();
-    
+
     // 初始化组件
     this.initComponents();
-    
+
     // 设置事件监听器
     this.setupEventListeners();
-    
+
     // 加载保存的设置
     this.loadSettings();
-    
+
+    // 加载自动保存设置
+    this.loadAutoSaveSettings();
+
     // 初始化界面状态
     this.updateUI();
-    
+
     // 设置对比模态框
     this.setupComparisonModal();
   }
@@ -106,14 +118,17 @@ class MarkdownEditorApp {
     
     // 初始化图像生成器
     this.imageGenerator = new window.ImageGenerator();
-    
+
     this.imageGenerator.setOnInsertImage((markdown) => {
       this.insertImageToEditor(markdown);
     });
-    
+
     this.imageGenerator.setOnImageGenerated((imageData) => {
       this.imageGenerator.saveToHistory(imageData);
     });
+
+    // 初始化查找替换功能
+    this.findReplace = new window.FindReplace(this.editor);
     
     // 初始化分隔条
     this.setupResizer();
@@ -140,8 +155,7 @@ class MarkdownEditorApp {
     document.getElementById('openFolderFromTree').addEventListener('click', () => this.openFolder());
     
     // 预览面板按钮
-    document.getElementById('closePreview').addEventListener('click', () => this.hidePreview());
-    document.getElementById('showPreview').addEventListener('click', () => this.showPreview());
+    document.getElementById('togglePreview').addEventListener('click', () => this.togglePreview());
     document.getElementById('showImageHistory').addEventListener('click', () => this.showImageHistory());
     
     // 图像历史模态框
@@ -214,6 +228,14 @@ class MarkdownEditorApp {
               e.preventDefault();
               this.showImageGenerator();
             }
+            break;
+          case 'f':
+            e.preventDefault();
+            this.showFindDialog();
+            break;
+          case 'h':
+            e.preventDefault();
+            this.showReplaceDialog();
             break;
         }
       }
@@ -291,14 +313,17 @@ class MarkdownEditorApp {
     this.isDirty = true;
     this.preview.update(content);
     this.updateUI();
-    
+
     // 更新当前标签页
     if (this.tabManager.getCurrentTab()) {
-      this.tabManager.updateCurrentTab({ 
+      this.tabManager.updateCurrentTab({
         content: content,
-        isDirty: true 
+        isDirty: true
       });
     }
+
+    // 触发自动保存
+    this.scheduleAutoSave();
   }
   
   // 标签页切换处理
@@ -413,7 +438,7 @@ class MarkdownEditorApp {
       if (result.success) {
         this.currentFile = filePath;
         this.isDirty = false;
-        
+
         // 更新标签页
         const currentTab = this.tabManager.getCurrentTab();
         if (currentTab) {
@@ -424,11 +449,16 @@ class MarkdownEditorApp {
             isDirty: false
           });
         }
-        
+
         // 添加到最近文件
         window.storageService.addRecentFile(filePath);
-        
+
         this.updateUI();
+
+        // 更新自动保存状态
+        this.autoSave.lastSaveTime = Date.now();
+        this.autoSave.pendingSave = false;
+        this.updateAutoSaveStatus();
       } else {
         alert(`保存文件失败: ${result.error}`);
       }
@@ -928,34 +958,48 @@ class MarkdownEditorApp {
   }
   
   // 预览面板操作
+  togglePreview() {
+    if (this.isPreviewVisible) {
+      this.hidePreview();
+    } else {
+      this.showPreview();
+    }
+  }
+
   hidePreview() {
     this.isPreviewVisible = false;
     const previewPanel = document.getElementById('previewPanel');
     const resizer = document.getElementById('resizer');
-    const showPreviewBtn = document.getElementById('showPreview');
+    const togglePreviewBtn = document.getElementById('togglePreview');
     const editorPanel = document.querySelector('.editor-panel');
-    
+
     previewPanel.style.display = 'none';
     resizer.style.display = 'none';
-    showPreviewBtn.style.display = 'inline-block';
     editorPanel.style.flex = '1';
-    
+
+    // 更新按钮文本和提示
+    togglePreviewBtn.title = '显示预览';
+    togglePreviewBtn.style.opacity = '0.6';
+
     this.saveSettings();
   }
-  
+
   showPreview() {
     this.isPreviewVisible = true;
     const previewPanel = document.getElementById('previewPanel');
     const resizer = document.getElementById('resizer');
-    const showPreviewBtn = document.getElementById('showPreview');
+    const togglePreviewBtn = document.getElementById('togglePreview');
     const editorPanel = document.querySelector('.editor-panel');
-    
+
     previewPanel.style.display = 'flex';
     resizer.style.display = 'block';
-    showPreviewBtn.style.display = 'none';
     editorPanel.style.flex = '0 0 50%';
     previewPanel.style.flex = '0 0 50%';
-    
+
+    // 更新按钮文本和提示
+    togglePreviewBtn.title = '隐藏预览';
+    togglePreviewBtn.style.opacity = '1';
+
     this.saveSettings();
   }
   
@@ -1044,9 +1088,16 @@ class MarkdownEditorApp {
   
   loadSettings() {
     const settings = window.storageService.loadSettings();
-    
-    if (!settings.previewVisible) {
+
+    if (settings.previewVisible === false) {
       this.hidePreview();
+    } else {
+      // 确保按钮状态正确
+      const togglePreviewBtn = document.getElementById('togglePreview');
+      if (togglePreviewBtn) {
+        togglePreviewBtn.title = '隐藏预览';
+        togglePreviewBtn.style.opacity = '1';
+      }
     }
   }
   
@@ -1232,6 +1283,139 @@ class MarkdownEditorApp {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  // 自动保存相关方法
+  scheduleAutoSave() {
+    if (!this.autoSave.enabled) {
+      return;
+    }
+
+    // 清除现有的定时器
+    if (this.autoSave.timer) {
+      clearTimeout(this.autoSave.timer);
+    }
+
+    // 设置新的定时器
+    this.autoSave.timer = setTimeout(() => {
+      this.performAutoSave();
+    }, this.autoSave.interval);
+
+    this.autoSave.pendingSave = true;
+    this.updateAutoSaveStatus();
+  }
+
+  async performAutoSave() {
+    if (!this.autoSave.enabled || !this.isDirty) {
+      this.autoSave.pendingSave = false;
+      this.updateAutoSaveStatus();
+      return;
+    }
+
+    const currentTab = this.tabManager.getCurrentTab();
+    if (currentTab && currentTab.filePath) {
+      try {
+        await this.saveFileToPath(currentTab.filePath);
+        this.showAutoSaveNotification('自动保存成功');
+      } catch (error) {
+        console.error('自动保存失败:', error);
+        this.showAutoSaveNotification('自动保存失败', true);
+      }
+    } else {
+      // 如果文件还没有路径，不进行自动保存
+      this.autoSave.pendingSave = false;
+      this.updateAutoSaveStatus();
+    }
+  }
+
+  updateAutoSaveStatus() {
+    const statusElement = document.getElementById('autoSaveStatus');
+    if (statusElement) {
+      if (this.autoSave.pendingSave && this.isDirty) {
+        statusElement.textContent = '等待自动保存...';
+        statusElement.className = 'auto-save-status pending';
+      } else if (this.autoSave.lastSaveTime > 0 && !this.isDirty) {
+        const timeSinceLastSave = Math.floor((Date.now() - this.autoSave.lastSaveTime) / 1000);
+        statusElement.textContent = `已保存 (${timeSinceLastSave}秒前)`;
+        statusElement.className = 'auto-save-status saved';
+      } else {
+        statusElement.textContent = '';
+        statusElement.className = 'auto-save-status';
+      }
+    }
+  }
+
+  showAutoSaveNotification(message, isError = false) {
+    // 创建通知元素
+    const notification = document.createElement('div');
+    notification.className = `auto-save-notification ${isError ? 'error' : 'success'}`;
+    notification.textContent = message;
+
+    // 添加到页面
+    document.body.appendChild(notification);
+
+    // 显示动画
+    setTimeout(() => {
+      notification.classList.add('show');
+    }, 10);
+
+    // 自动隐藏
+    setTimeout(() => {
+      notification.classList.remove('show');
+      setTimeout(() => {
+        if (notification.parentNode) {
+          notification.parentNode.removeChild(notification);
+        }
+      }, 300);
+    }, 2000);
+  }
+
+  toggleAutoSave() {
+    this.autoSave.enabled = !this.autoSave.enabled;
+
+    if (this.autoSave.enabled) {
+      this.showAutoSaveNotification('自动保存已开启');
+    } else {
+      this.showAutoSaveNotification('自动保存已关闭');
+      if (this.autoSave.timer) {
+        clearTimeout(this.autoSave.timer);
+        this.autoSave.timer = null;
+      }
+    }
+
+    this.updateAutoSaveStatus();
+    this.saveAutoSaveSettings();
+  }
+
+  setAutoSaveInterval(interval) {
+    this.autoSave.interval = Math.max(10000, interval); // 最小10秒
+    this.saveAutoSaveSettings();
+  }
+
+  saveAutoSaveSettings() {
+    window.storageService.set('autoSaveSettings', {
+      enabled: this.autoSave.enabled,
+      interval: this.autoSave.interval
+    });
+  }
+
+  loadAutoSaveSettings() {
+    const settings = window.storageService.get('autoSaveSettings', {
+      enabled: true,
+      interval: 30000
+    });
+
+    this.autoSave.enabled = settings.enabled;
+    this.autoSave.interval = settings.interval;
+  }
+
+  // 查找替换功能
+  showFindDialog() {
+    this.findReplace.show(false);
+  }
+
+  showReplaceDialog() {
+    this.findReplace.show(true);
   }
 
   // 工具函数

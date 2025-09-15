@@ -1,11 +1,13 @@
 /**
  * 本地存储服务
  * 封装 localStorage 操作，提供统一的存储接口
+ * 对于敏感数据（如 API Keys），使用安全存储
  */
 class StorageService {
   constructor(prefix = 'markdownEditor') {
     this.prefix = prefix;
     this.storage = window.storageAPI || this.createFallbackStorage();
+    this.secureStorage = window.secureStorageAPI;
   }
 
   // 创建备用存储方案
@@ -145,34 +147,106 @@ class StorageService {
     return this.get('shortcuts', {});
   }
 
-  // 保存 API 设置
-  saveApiSettings(settings) {
-    return this.set('apiSettings', settings);
+  // 保存 API 设置（使用安全存储）
+  async saveApiSettings(settings) {
+    try {
+      // 创建设置副本，分离敏感数据
+      const settingsCopy = JSON.parse(JSON.stringify(settings));
+      const sensitiveData = {};
+
+      // 提取并清除敏感数据
+      if (settingsCopy.deepseek && settingsCopy.deepseek.apiKey) {
+        sensitiveData['deepseek.apiKey'] = settingsCopy.deepseek.apiKey;
+        settingsCopy.deepseek.apiKey = '';
+      }
+      if (settingsCopy.zhipu && settingsCopy.zhipu.apiKey) {
+        sensitiveData['zhipu.apiKey'] = settingsCopy.zhipu.apiKey;
+        settingsCopy.zhipu.apiKey = '';
+      }
+
+      // 保存非敏感数据到普通存储
+      this.set('apiSettings', settingsCopy);
+
+      // 保存敏感数据到安全存储
+      if (this.secureStorage && Object.keys(sensitiveData).length > 0) {
+        const isAvailable = await this.secureStorage.isAvailable();
+        if (isAvailable.success && isAvailable.available) {
+          for (const [key, value] of Object.entries(sensitiveData)) {
+            if (value) {
+              await this.secureStorage.setItem(`apiSettings.${key}`, value);
+            }
+          }
+        } else {
+          console.warn('安全存储不可用，API Keys 将使用普通存储');
+          // 如果安全存储不可用，保存完整设置到普通存储
+          this.set('apiSettings', settings);
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('保存 API 设置失败:', error);
+      // 回退到普通存储
+      return this.set('apiSettings', settings);
+    }
   }
 
-  // 读取 API 设置
-  loadApiSettings() {
-    return this.get('apiSettings', {
-      provider: 'deepseek', // 默认使用 DeepSeek
-      deepseek: {
-        apiKey: '',
-        endpoint: 'https://api.deepseek.com/chat/completions',
-        model: 'deepseek-chat',
+  // 读取 API 设置（从安全存储和普通存储）
+  async loadApiSettings() {
+    try {
+      // 默认设置
+      const defaultSettings = {
+        provider: 'deepseek',
+        deepseek: {
+          apiKey: '',
+          endpoint: 'https://api.deepseek.com/chat/completions',
+          model: 'deepseek-chat',
+          systemPrompt: '你是一个专业的文本优化助手。请帮我优化以下文本，让它更清晰、准确、易懂。保持原文的主要意思，但可以改进表达方式、语法和结构。'
+        },
+        zhipu: {
+          apiKey: '',
+          endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
+          model: 'glm-4.5',
+          systemPrompt: '你是一个专业的文本优化助手。请帮我优化以下文本，让它更清晰、准确、易懂。保持原文的主要意思，但可以改进表达方式、语法和结构。'
+        },
         systemPrompt: '你是一个专业的文本优化助手。请帮我优化以下文本，让它更清晰、准确、易懂。保持原文的主要意思，但可以改进表达方式、语法和结构。'
-      },
-      zhipu: {
-        apiKey: '',
-        endpoint: 'https://open.bigmodel.cn/api/paas/v4/chat/completions',
-        model: 'glm-4.5',
-        systemPrompt: '你是一个专业的文本优化助手。请帮我优化以下文本，让它更清晰、准确、易懂。保持原文的主要意思，但可以改进表达方式、语法和结构。'
-      },
-      systemPrompt: '你是一个专业的文本优化助手。请帮我优化以下文本，让它更清晰、准确、易懂。保持原文的主要意思，但可以改进表达方式、语法和结构。'
-    });
+      };
+
+      // 读取非敏感数据
+      const storedSettings = this.get('apiSettings', defaultSettings);
+
+      // 读取敏感数据
+      if (this.secureStorage) {
+        const isAvailable = await this.secureStorage.isAvailable();
+        if (isAvailable.success && isAvailable.available) {
+          try {
+            // 读取 DeepSeek API Key
+            const deepseekResult = await this.secureStorage.getItem('apiSettings.deepseek.apiKey');
+            if (deepseekResult.success && deepseekResult.data) {
+              storedSettings.deepseek.apiKey = deepseekResult.data;
+            }
+
+            // 读取智谱 API Key
+            const zhipuResult = await this.secureStorage.getItem('apiSettings.zhipu.apiKey');
+            if (zhipuResult.success && zhipuResult.data) {
+              storedSettings.zhipu.apiKey = zhipuResult.data;
+            }
+          } catch (error) {
+            console.warn('读取安全存储的 API Keys 失败:', error);
+          }
+        }
+      }
+
+      return storedSettings;
+    } catch (error) {
+      console.error('读取 API 设置失败:', error);
+      return this.get('apiSettings', {});
+    }
   }
   
   // 获取当前使用的 API 配置
-  getCurrentApiConfig() {
-    const settings = this.loadApiSettings();
+  async getCurrentApiConfig() {
+    const settings = await this.loadApiSettings();
     const provider = settings.provider || 'deepseek';
     return {
       provider: provider,

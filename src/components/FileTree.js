@@ -9,7 +9,10 @@ class FileTree {
     this.currentFolder = null;
     this.files = [];
     this.activeFile = null;
-    
+
+    // 跟踪文件夹展开状态
+    this.expandedFolders = new Set();
+
     this.init();
   }
 
@@ -52,25 +55,38 @@ class FileTree {
   renderItems(items, level) {
     return items.map(item => {
       const indent = level * 20;
-      
+
       if (item.type === 'directory') {
+        const isExpanded = this.expandedFolders.has(item.path);
+        const hasChildren = item.children && item.children.length > 0;
+        const expandIcon = hasChildren ? (isExpanded ? '▼' : '▶') : '';
+
         let html = `
-          <div class="file-tree-item folder-item" style="padding-left: ${indent}px">
+          <div class="file-tree-item folder-item"
+               data-path="${item.path}"
+               data-type="directory"
+               style="padding-left: ${indent}px">
+            <span class="expand-icon" style="display: ${hasChildren ? 'inline' : 'none'}">${expandIcon}</span>
             <span class="folder-icon">📁</span>
             <span class="file-name">${item.name}</span>
           </div>
         `;
-        
-        if (item.children && item.children.length > 0) {
-          html += this.renderItems(item.children, level + 1);
+
+        if (hasChildren && isExpanded) {
+          html += `
+            <div class="folder-content" data-folder="${item.path}">
+              ${this.renderItems(item.children, level + 1)}
+            </div>
+          `;
         }
-        
+
         return html;
       } else {
         const isActive = this.activeFile === item.path;
         return `
-          <div class="file-tree-item file-item ${isActive ? 'active' : ''}" 
-               data-path="${item.path}" 
+          <div class="file-tree-item file-item ${isActive ? 'active' : ''}"
+               data-path="${item.path}"
+               data-type="file"
                style="padding-left: ${indent}px"
                title="${item.path}">
             <span class="file-icon">📄</span>
@@ -106,23 +122,45 @@ class FileTree {
   // 绑定事件
   bindEvents() {
     const fileItems = this.container.querySelectorAll('.file-item');
-    
+
     fileItems.forEach(item => {
-      // 单击打开文件
-      item.addEventListener('click', async () => {
-        const filePath = item.dataset.path;
-        if (filePath && this.onFileSelect) {
-          this.setActiveFile(filePath);
-          await this.onFileSelect(filePath);
+      const itemType = item.dataset.type;
+      const itemPath = item.dataset.path;
+
+      // 单击事件
+      item.addEventListener('click', async (e) => {
+        e.stopPropagation();
+
+        if (itemType === 'directory') {
+          // 文件夹点击：展开/折叠
+          this.toggleFolder(itemPath);
+        } else if (itemType === 'file') {
+          // 文件点击：打开文件
+          if (itemPath && this.onFileSelect) {
+            this.setActiveFile(itemPath);
+            await this.onFileSelect(itemPath);
+          }
         }
       });
 
       // 右键菜单
       item.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        const filePath = item.dataset.path;
-        if (filePath) {
-          this.showContextMenu(e, filePath);
+        if (itemPath) {
+          this.showContextMenu(e, itemPath);
+        }
+      });
+    });
+
+    // 绑定展开图标点击事件
+    const expandIcons = this.container.querySelectorAll('.expand-icon');
+    expandIcons.forEach(icon => {
+      icon.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const folderItem = icon.closest('.folder-item');
+        if (folderItem) {
+          const folderPath = folderItem.dataset.path;
+          this.toggleFolder(folderPath);
         }
       });
     });
@@ -238,7 +276,14 @@ class FileTree {
 
   // 展开/折叠文件夹
   toggleFolder(folderPath) {
-    // TODO: 实现文件夹展开/折叠功能
+    if (this.expandedFolders.has(folderPath)) {
+      this.expandedFolders.delete(folderPath);
+    } else {
+      this.expandedFolders.add(folderPath);
+    }
+
+    // 重新渲染文件树
+    this.render();
   }
 
   // 清空文件树

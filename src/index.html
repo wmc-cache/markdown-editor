@@ -24,7 +24,7 @@
                 </button>
             </div>
             <div class="toolbar-right">
-                <button id="showPreview" class="btn btn-icon" title="显示预览" style="display: none;">
+                <button id="togglePreview" class="btn btn-icon" title="隐藏预览">
                     👁️
                 </button>
                 <button id="themeToggle" class="btn btn-icon" title="切换主题">
@@ -73,6 +73,38 @@
                 <div class="panel-header">
                     <h3>编辑器</h3>
                 </div>
+                <!-- 查找替换面板 -->
+                <div id="findReplacePanel" class="find-replace-panel" style="display: none;">
+                    <div class="find-replace-content">
+                        <div class="find-section">
+                            <input type="text" id="findInput" placeholder="查找..." class="find-input">
+                            <div class="find-controls">
+                                <button id="findPrevBtn" class="btn btn-icon" title="上一个">↑</button>
+                                <button id="findNextBtn" class="btn btn-icon" title="下一个">↓</button>
+                                <span id="findResults" class="find-results"></span>
+                            </div>
+                        </div>
+                        <div class="replace-section" id="replaceSection">
+                            <input type="text" id="replaceInput" placeholder="替换为..." class="replace-input">
+                            <div class="replace-controls">
+                                <button id="replaceBtn" class="btn btn-sm" title="替换">替换</button>
+                                <button id="replaceAllBtn" class="btn btn-sm" title="替换全部">全部替换</button>
+                            </div>
+                        </div>
+                        <div class="find-options">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="caseSensitive"> 区分大小写
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="wholeWord"> 全词匹配
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="useRegex"> 正则表达式
+                            </label>
+                        </div>
+                        <button id="closeFindReplace" class="close-find-replace" title="关闭">×</button>
+                    </div>
+                </div>
                 <div id="editor" class="editor-container"></div>
             </div>
 
@@ -86,9 +118,6 @@
                     <div class="panel-actions">
                         <button id="showImageHistory" class="btn btn-icon" title="查看图像历史">
                             🖼️
-                        </button>
-                        <button id="closePreview" class="btn btn-icon" title="关闭预览">
-                            ✕
                         </button>
                     </div>
                 </div>
@@ -115,10 +144,10 @@
         <div class="status-bar">
             <div class="status-left">
                 <span id="fileStatus">新建文档</span>
+                <span id="autoSaveStatus" class="auto-save-status"></span>
             </div>
             <div class="status-right">
                 <span id="wordCount">0 字符</span>
-            
                 <span id="lineCount">第 1 行</span>
             </div>
         </div>
@@ -328,7 +357,8 @@
     <script src="components/TabManager.js"></script>
     <script src="components/ThemeSelector.js"></script>
     <script src="components/ImageGenerator.js"></script>
-    
+    <script src="components/FindReplace.js"></script>
+
     <!-- 主应用程序 -->
     <script src="renderer.js"></script>
 </body>

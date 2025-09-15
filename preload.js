@@ -40,7 +40,7 @@ contextBridge.exposeInMainWorld('storageAPI', {
       return false;
     }
   },
-  
+
   getItem: (key) => {
     try {
       const item = localStorage.getItem(key);
@@ -50,7 +50,7 @@ contextBridge.exposeInMainWorld('storageAPI', {
       return null;
     }
   },
-  
+
   removeItem: (key) => {
     try {
       localStorage.removeItem(key);
@@ -60,4 +60,19 @@ contextBridge.exposeInMainWorld('storageAPI', {
       return false;
     }
   }
+});
+
+// 暴露安全存储API（用于敏感数据如API Keys）
+contextBridge.exposeInMainWorld('secureStorageAPI', {
+  // 检查安全存储是否可用
+  isAvailable: () => ipcRenderer.invoke('secure-storage-available'),
+
+  // 安全存储数据
+  setItem: (key, value) => ipcRenderer.invoke('secure-storage-set', key, value),
+
+  // 获取安全存储的数据
+  getItem: (key) => ipcRenderer.invoke('secure-storage-get', key),
+
+  // 删除安全存储的数据
+  removeItem: (key) => ipcRenderer.invoke('secure-storage-delete', key)
 });
