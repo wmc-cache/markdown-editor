@@ -35,34 +35,44 @@ class Editor {
       }
     });
     
-    // 选择变化监听 - 使用多个事件确保捕获所有选择变化
-    const updateSelection = () => {
-      if (this.onSelectionChange) {
-        const selection = this.getSelection();
-        this.onSelectionChange(selection);
-      }
-    };
+    // 选择变化监听已经在下面的优化版本中处理
     
-    this.editor.addEventListener('keyup', updateSelection);
-    this.editor.addEventListener('mouseup', updateSelection);
-    this.editor.addEventListener('click', updateSelection);
-    this.editor.addEventListener('focus', updateSelection);
-    
-    // 使用定时器检查选中文本变化
+    // 优化的选择监听 - 使用事件驱动和节流
     let lastSelection = '';
-    setInterval(() => {
-      if (this.editor && this.onSelectionChange) {
-        const currentSelection = this.getSelectedText();
-        if (currentSelection !== lastSelection) {
-          lastSelection = currentSelection;
-          try {
-            this.onSelectionChange(this.getSelection());
-          } catch (error) {
-            console.error('Selection change callback error:', error);
+    let selectionChangeTimeout = null;
+
+    const handleSelectionChange = () => {
+      // 清除之前的延时
+      if (selectionChangeTimeout) {
+        clearTimeout(selectionChangeTimeout);
+      }
+
+      // 使用短延时来避免过度频繁的触发
+      selectionChangeTimeout = setTimeout(() => {
+        if (this.editor && this.onSelectionChange) {
+          const currentSelection = this.getSelectedText();
+          if (currentSelection !== lastSelection) {
+            lastSelection = currentSelection;
+            try {
+              this.onSelectionChange(this.getSelection());
+            } catch (error) {
+              console.error('Selection change callback error:', error);
+            }
           }
         }
+      }, 50); // 减少延时时间但提高响应性
+    };
+
+    // 监听多种选择相关事件
+    ['selectionchange', 'select', 'keyup', 'mouseup', 'touchend'].forEach(eventType => {
+      if (eventType === 'selectionchange') {
+        // document 上的 selectionchange 事件
+        document.addEventListener(eventType, handleSelectionChange);
+      } else {
+        // textarea 上的其他事件
+        this.editor.addEventListener(eventType, handleSelectionChange);
       }
-    }, 200);
+    });
   }
 
   // 获取编辑器内容
