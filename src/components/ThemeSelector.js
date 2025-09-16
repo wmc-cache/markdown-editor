@@ -16,12 +16,28 @@ class ThemeSelector {
     ];
 
     this.onThemeChangeCallback = null;
+
+    // 缓存 DOM 元素
+    this.cachedElements = {
+      modal: null,
+      themeOptions: null,
+      body: null
+    };
+
     this.init();
   }
 
   init() {
+    // 缓存常用 DOM 元素
+    this.cacheElements();
     this.setupEventListeners();
     this.loadSavedTheme();
+  }
+
+  // 缓存 DOM 元素避免重复查询
+  cacheElements() {
+    this.cachedElements.modal = document.getElementById('themeSettingsModal');
+    this.cachedElements.body = document.body;
   }
 
   // 设置事件监听器
@@ -78,33 +94,52 @@ class ThemeSelector {
 
   // 显示模态框
   showModal() {
-    const modal = document.getElementById('themeSettingsModal');
+    const modal = this.cachedElements.modal;
     if (modal) {
-      modal.style.display = 'flex';
-      setTimeout(() => modal.classList.add('show'), 10);
+      // 使用 requestAnimationFrame 优化动画
+      requestAnimationFrame(() => {
+        modal.style.display = 'flex';
+        requestAnimationFrame(() => {
+          modal.classList.add('show');
+        });
+      });
       this.updateActiveTheme();
     }
   }
 
   // 隐藏模态框
   hideModal() {
-    const modal = document.getElementById('themeSettingsModal');
+    const modal = this.cachedElements.modal;
     if (modal) {
       modal.classList.remove('show');
-      setTimeout(() => {
+      // 使用 transitionend 事件而非 setTimeout
+      const handleTransitionEnd = () => {
         modal.style.display = 'none';
+        modal.removeEventListener('transitionend', handleTransitionEnd);
+      };
+      modal.addEventListener('transitionend', handleTransitionEnd);
+
+      // 备用超时机制
+      setTimeout(() => {
+        if (modal.style.display !== 'none') {
+          modal.style.display = 'none';
+          modal.removeEventListener('transitionend', handleTransitionEnd);
+        }
       }, 300);
     }
   }
 
   // 更新活跃主题显示
   updateActiveTheme() {
-    const options = document.querySelectorAll('.theme-option');
-    options.forEach(option => {
-      option.classList.remove('active');
-      if (option.dataset.theme === this.currentTheme) {
-        option.classList.add('active');
-      }
+    // 缓存主题选项元素
+    if (!this.cachedElements.themeOptions) {
+      this.cachedElements.themeOptions = document.querySelectorAll('.theme-option');
+    }
+
+    // 使用 DocumentFragment 批量更新 DOM
+    this.cachedElements.themeOptions.forEach(option => {
+      const isActive = option.dataset.theme === this.currentTheme;
+      option.classList.toggle('active', isActive);
     });
   }
 
@@ -112,40 +147,49 @@ class ThemeSelector {
   setTheme(themeId) {
     if (this.currentTheme === themeId) return;
 
-    this.currentTheme = themeId;
-
-    // 应用主题到DOM
-    this.applyTheme(themeId);
-
-    // 更新活跃状态
-    this.updateActiveTheme();
-
-    // 保存到本地存储
-    this.saveTheme();
-
-    // 触发回调
-    if (this.onThemeChangeCallback) {
-      this.onThemeChangeCallback(themeId);
+    // 使用节流避免频繁切换
+    if (this.themeChangeTimeout) {
+      clearTimeout(this.themeChangeTimeout);
     }
 
-    // 关闭模态框
-    this.hideModal();
+    this.themeChangeTimeout = setTimeout(() => {
+      this.currentTheme = themeId;
+
+      // 应用主题到DOM
+      this.applyTheme(themeId);
+
+      // 更新活跃状态
+      this.updateActiveTheme();
+
+      // 保存到本地存储
+      this.saveTheme();
+
+      // 触发回调
+      if (this.onThemeChangeCallback) {
+        this.onThemeChangeCallback(themeId);
+      }
+
+      // 关闭模态框
+      this.hideModal();
+    }, 50);
   }
 
   // 应用主题
   applyTheme(themeId) {
-    const body = document.body;
+    const body = this.cachedElements.body;
 
-    // 移除所有主题类
-    this.themes.forEach(theme => {
-      body.classList.remove(`theme-${theme.id}`);
+    // 使用单次操作优化性能
+    if (this.currentTheme !== 'default') {
       body.removeAttribute('data-theme');
-    });
+    }
 
     // 添加新主题
     if (themeId !== 'default') {
       body.setAttribute('data-theme', themeId);
     }
+
+    // 强制重排优化
+    body.offsetHeight;
   }
 
   // 获取当前主题

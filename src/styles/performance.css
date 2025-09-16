@@ -1,0 +1,96 @@
+/* 性能优化样式 */
+
+/* 全局硬件加速 */
+.app {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* 模态框性能优化 */
+.modal {
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+}
+
+.modal-content {
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* 主题选择器性能优化 */
+.theme-settings-modal .modal-content {
+    contain: layout style paint;
+    will-change: auto;
+}
+
+.theme-option {
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+.theme-option:hover {
+    will-change: transform, border-color, box-shadow;
+}
+
+.theme-option:not(:hover) {
+    will-change: auto;
+}
+
+/* 动画性能优化 */
+.theme-preview {
+    backface-visibility: hidden;
+}
+
+/* 减少重绘 */
+.theme-info {
+    contain: layout style;
+}
+
+/* 虚拟滚动优化（如果需要） */
+.theme-grid {
+    scroll-behavior: smooth;
+}
+
+/* GPU 层级优化 */
+@supports (transform: translate3d(0, 0, 0)) {
+    .theme-option,
+    .modal-content,
+    .theme-preview {
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+/* 降级方案 */
+@media (max-width: 768px) {
+    .theme-option {
+        will-change: auto;
+        contain: layout;
+    }
+
+    .modal {
+        backdrop-filter: none;
+        background-color: rgba(0, 0, 0, 0.6);
+    }
+}
+
+/* 低性能设备优化 */
+@media (prefers-reduced-motion: reduce) {
+    .modal,
+    .modal-content,
+    .theme-option {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .theme-option:hover {
+        transform: none !important;
+    }
+}
+
+/* 高刷新率设备优化 */
+@media (min-resolution: 120dpi) {
+    .theme-option {
+        transition-timing-function: linear;
+    }
+}

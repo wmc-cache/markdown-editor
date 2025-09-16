@@ -2,6 +2,7 @@
 @import "./variables.css";
 @import "./animations.css";
 @import "./reset.css";
+@import "./performance.css";
 /* 主应用容器 */
 .app {
     height: 100vh;
@@ -245,15 +246,13 @@
 .editor-panel {
     flex: 1;
     min-width: 300px;
-    border-radius: 0 12px 12px 0;
-        overflow: hidden;
+    overflow: hidden;
 }
 
 .preview-panel {
     flex: 1;
     min-width: 300px;
-    border-radius: 12px 0 0 12px;
-        overflow: hidden;
+    overflow: hidden;
 }
 
 .panel-header {
@@ -262,6 +261,7 @@
         backdrop-filter: blur(20px) saturate(180%);
         border-bottom: 0.5px solid var(--separator-color);
     flex-shrink: 0;
+    height: 52px;
 }
 
 .panel-header h3 {
@@ -633,11 +633,12 @@ body.resizing {
     top: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.3);
-        backdrop-filter: blur(20px);
-        animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background-color: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.2s ease-out;
     align-items: center;
     justify-content: center;
+    will-change: opacity;
 }
 
 .modal.show {
@@ -647,14 +648,15 @@ body.resizing {
 .modal-content {
     background-color: var(--bg-primary);
     border-radius: 16px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15), 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-xl);
     width: 90%;
     max-width: 500px;
     max-height: 80vh;
     overflow-y: auto;
-    animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        backdrop-filter: blur(20px) saturate(180%);
-        border: 1px solid rgba(255, 255, 255, 0.18);
+    animation: slideIn 0.2s ease-out;
+    border: 1px solid var(--border-color);
+    will-change: transform, opacity;
+    transform: translate3d(0, 0, 0);
 }
 
 .modal-header {
@@ -662,8 +664,8 @@ body.resizing {
     align-items: center;
     justify-content: space-between;
     padding: 1.5rem;
-        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--separator-color);
+    background-color: var(--bg-secondary);
 }
 
 .modal-header h3 {
@@ -873,6 +875,8 @@ body.resizing {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 1rem;
     padding: 1rem 0;
+    contain: layout;
+    will-change: auto;
 }
 
 .theme-option {
@@ -880,15 +884,16 @@ body.resizing {
     border-radius: 12px;
     padding: 1rem;
     cursor: pointer;
-    transition: var(--transition);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     background: var(--bg-secondary);
-    backdrop-filter: blur(10px);
+    will-change: transform;
+    contain: layout style paint;
 }
 
 .theme-option:hover {
     border-color: var(--bg-accent);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    transform: translate3d(0, -2px, 0);
+    box-shadow: var(--shadow-lg);
 }
 
 .theme-option.active {
@@ -903,7 +908,9 @@ body.resizing {
     margin-bottom: 0.75rem;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--shadow-sm);
+    transform: translate3d(0, 0, 0);
+    contain: layout style paint;
 }
 
 .preview-header {
@@ -1246,7 +1253,7 @@ body.resizing {
         background: var(--bg-secondary);
         backdrop-filter: blur(20px) saturate(180%);
         border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        border-radius: 12px 12px 0 0;
+    
 }
 
 .panel-actions {
