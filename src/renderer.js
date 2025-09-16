@@ -31,14 +31,6 @@ class MarkdownEditorApp {
       selectionEnd: 0
     };
 
-    // 自动保存配置
-    this.autoSave = {
-      enabled: true,
-      interval: 30000, // 30秒间隔
-      timer: null,
-      lastSaveTime: 0,
-      pendingSave: false
-    };
     
     this.init();
   }
@@ -59,8 +51,6 @@ class MarkdownEditorApp {
     // 加载保存的设置
     this.loadSettings();
 
-    // 加载自动保存设置
-    this.loadAutoSaveSettings();
 
     // 初始化界面状态
     await this.updateUI();
@@ -327,9 +317,6 @@ class MarkdownEditorApp {
         isDirty: true
       });
     }
-
-    // 触发自动保存
-    this.scheduleAutoSave();
   }
   
   // 标签页切换处理
@@ -460,11 +447,6 @@ class MarkdownEditorApp {
         window.storageService.addRecentFile(filePath);
 
         this.updateUI();
-
-        // 更新自动保存状态
-        this.autoSave.lastSaveTime = Date.now();
-        this.autoSave.pendingSave = false;
-        this.updateAutoSaveStatus();
       } else {
         alert(`保存文件失败: ${result.error}`);
       }
@@ -1431,128 +1413,21 @@ class MarkdownEditorApp {
     URL.revokeObjectURL(url);
   }
 
-  // 自动保存相关方法
-  scheduleAutoSave() {
-    if (!this.autoSave.enabled) {
-      return;
+  // 标记文档已修改
+  markDirty() {
+    this.isDirty = true;
+    if (this.tabManager.getCurrentTab()) {
+      this.tabManager.updateCurrentTab({ isDirty: true });
     }
+    this.updateUI();
+  }
 
-    // 清除现有的定时器
-    if (this.autoSave.timer) {
-      clearTimeout(this.autoSave.timer);
+  setDirty(dirty) {
+    this.isDirty = dirty;
+    if (this.tabManager.getCurrentTab()) {
+      this.tabManager.updateCurrentTab({ isDirty: dirty });
     }
-
-    // 设置新的定时器
-    this.autoSave.timer = setTimeout(() => {
-      this.performAutoSave();
-    }, this.autoSave.interval);
-
-    this.autoSave.pendingSave = true;
-    this.updateAutoSaveStatus();
-  }
-
-  async performAutoSave() {
-    if (!this.autoSave.enabled || !this.isDirty) {
-      this.autoSave.pendingSave = false;
-      this.updateAutoSaveStatus();
-      return;
-    }
-
-    const currentTab = this.tabManager.getCurrentTab();
-    if (currentTab && currentTab.filePath) {
-      try {
-        await this.saveFileToPath(currentTab.filePath);
-        this.showAutoSaveNotification('自动保存成功');
-      } catch (error) {
-        console.error('自动保存失败:', error);
-        this.showAutoSaveNotification('自动保存失败', true);
-      }
-    } else {
-      // 如果文件还没有路径，不进行自动保存
-      this.autoSave.pendingSave = false;
-      this.updateAutoSaveStatus();
-    }
-  }
-
-  updateAutoSaveStatus() {
-    const statusElement = document.getElementById('autoSaveStatus');
-    if (statusElement) {
-      if (this.autoSave.pendingSave && this.isDirty) {
-        statusElement.textContent = '等待自动保存...';
-        statusElement.className = 'auto-save-status pending';
-      } else if (this.autoSave.lastSaveTime > 0 && !this.isDirty) {
-        const timeSinceLastSave = Math.floor((Date.now() - this.autoSave.lastSaveTime) / 1000);
-        statusElement.textContent = `已保存 (${timeSinceLastSave}秒前)`;
-        statusElement.className = 'auto-save-status saved';
-      } else {
-        statusElement.textContent = '';
-        statusElement.className = 'auto-save-status';
-      }
-    }
-  }
-
-  showAutoSaveNotification(message, isError = false) {
-    // 创建通知元素
-    const notification = document.createElement('div');
-    notification.className = `auto-save-notification ${isError ? 'error' : 'success'}`;
-    notification.textContent = message;
-
-    // 添加到页面
-    document.body.appendChild(notification);
-
-    // 显示动画
-    setTimeout(() => {
-      notification.classList.add('show');
-    }, 10);
-
-    // 自动隐藏
-    setTimeout(() => {
-      notification.classList.remove('show');
-      setTimeout(() => {
-        if (notification.parentNode) {
-          notification.parentNode.removeChild(notification);
-        }
-      }, 300);
-    }, 2000);
-  }
-
-  toggleAutoSave() {
-    this.autoSave.enabled = !this.autoSave.enabled;
-
-    if (this.autoSave.enabled) {
-      this.showAutoSaveNotification('自动保存已开启');
-    } else {
-      this.showAutoSaveNotification('自动保存已关闭');
-      if (this.autoSave.timer) {
-        clearTimeout(this.autoSave.timer);
-        this.autoSave.timer = null;
-      }
-    }
-
-    this.updateAutoSaveStatus();
-    this.saveAutoSaveSettings();
-  }
-
-  setAutoSaveInterval(interval) {
-    this.autoSave.interval = Math.max(10000, interval); // 最小10秒
-    this.saveAutoSaveSettings();
-  }
-
-  saveAutoSaveSettings() {
-    window.storageService.set('autoSaveSettings', {
-      enabled: this.autoSave.enabled,
-      interval: this.autoSave.interval
-    });
-  }
-
-  loadAutoSaveSettings() {
-    const settings = window.storageService.get('autoSaveSettings', {
-      enabled: true,
-      interval: 30000
-    });
-
-    this.autoSave.enabled = settings.enabled;
-    this.autoSave.interval = settings.interval;
+    this.updateUI();
   }
 
   // 查找替换功能

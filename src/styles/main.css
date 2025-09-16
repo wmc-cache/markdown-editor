@@ -671,59 +671,6 @@ body.resizing {
     gap: 1rem;
 }
 
-/* 自动保存状态 */
-.auto-save-status {
-    font-size: 0.75rem;
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    background-color: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-}
-
-.auto-save-status.pending {
-    color: #856404;
-    background-color: #fff3cd;
-    border-color: #ffeaa7;
-}
-
-.auto-save-status.saved {
-    color: #155724;
-    background-color: #d4edda;
-    border-color: #c3e6cb;
-}
-
-/* 自动保存通知 */
-.auto-save-notification {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 0.75rem 1rem;
-    border-radius: var(--border-radius);
-    font-size: var(--font-size-sm);
-    font-weight: 500;
-    z-index: 10000;
-    opacity: 0;
-    transform: translateX(100%);
-    transition: all 0.3s ease;
-    box-shadow: var(--shadow-md);
-}
-
-.auto-save-notification.show {
-    opacity: 1;
-    transform: translateX(0);
-}
-
-.auto-save-notification.success {
-    color: #155724;
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-}
-
-.auto-save-notification.error {
-    color: #721c24;
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-}
 
 /* 查找替换面板 */
 .find-replace-panel {
