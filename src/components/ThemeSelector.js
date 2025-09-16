@@ -1,20 +1,21 @@
 /**
  * 主题选择器组件
- * 负责主题切换和管理
+ * 负责主题切换和管理 - 模态框版本
  */
 class ThemeSelector {
   constructor() {
-    this.currentTheme = 'light';
+    this.currentTheme = 'default';
     this.themes = [
-      { id: 'light', name: '默认浅色', icon: '☀️' },
-      { id: 'dark', name: '暗夜', icon: '🌙' },
+      { id: 'default', name: '默认浅色', icon: '🌅' },
+      { id: 'dark', name: '暗语', icon: '🌙' },
       { id: 'forest', name: '森林', icon: '🌲' },
-      { id: 'sunset', name: '日落', icon: '🌅' },
+      { id: 'sunset', name: '日落', icon: '🌇' },
       { id: 'ocean', name: '海洋', icon: '🌊' },
       { id: 'monokai', name: 'Monokai', icon: '🎨' },
       { id: 'rose', name: '玫瑰', icon: '🌹' }
     ];
-    
+
+    this.onThemeChangeCallback = null;
     this.init();
   }
 
@@ -28,79 +29,122 @@ class ThemeSelector {
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) {
       themeToggle.addEventListener('click', () => {
-        this.showSelector();
+        this.showModal();
       });
+    }
+
+    // 模态框关闭事件
+    const closeBtn = document.getElementById('closeThemeSettings');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', () => {
+        this.hideModal();
+      });
+    }
+
+    // 重置按钮
+    const resetBtn = document.getElementById('resetTheme');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        this.setTheme('default');
+      });
+    }
+
+    // 主题选项点击事件
+    document.addEventListener('click', (e) => {
+      const themeOption = e.target.closest('.theme-option');
+      if (themeOption) {
+        const themeId = themeOption.dataset.theme;
+        this.setTheme(themeId);
+      }
+    });
+
+    // 点击模态框背景关闭
+    const modal = document.getElementById('themeSettingsModal');
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          this.hideModal();
+        }
+      });
+    }
+
+    // ESC键关闭
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        this.hideModal();
+      }
+    });
+  }
+
+  // 显示模态框
+  showModal() {
+    const modal = document.getElementById('themeSettingsModal');
+    if (modal) {
+      modal.style.display = 'flex';
+      setTimeout(() => modal.classList.add('show'), 10);
+      this.updateActiveTheme();
     }
   }
 
-  // 显示主题选择器
-  showSelector() {
-    // 如果已存在选择器则移除
-    let existingSelector = document.getElementById('themeSelector');
-    if (existingSelector) {
-      existingSelector.remove();
-      return;
+  // 隐藏模态框
+  hideModal() {
+    const modal = document.getElementById('themeSettingsModal');
+    if (modal) {
+      modal.classList.remove('show');
+      setTimeout(() => {
+        modal.style.display = 'none';
+      }, 300);
     }
+  }
 
-    // 创建主题选择器容器
-    const selector = document.createElement('div');
-    selector.id = 'themeSelector';
-    selector.className = 'theme-selector';
-
-    // 创建主题列表
-    this.themes.forEach(theme => {
-      const item = document.createElement('div');
-      item.className = `theme-item ${theme.id === this.currentTheme ? 'active' : ''}`;
-      item.innerHTML = `
-        <span class="theme-icon">${theme.icon}</span>
-        <span class="theme-name">${theme.name}</span>
-      `;
-      item.addEventListener('click', () => {
-        this.setTheme(theme.id);
-        selector.remove();
-      });
-      selector.appendChild(item);
+  // 更新活跃主题显示
+  updateActiveTheme() {
+    const options = document.querySelectorAll('.theme-option');
+    options.forEach(option => {
+      option.classList.remove('active');
+      if (option.dataset.theme === this.currentTheme) {
+        option.classList.add('active');
+      }
     });
-
-    // 添加到主题按钮附近
-    const themeToggle = document.getElementById('themeToggle');
-    if (themeToggle && themeToggle.parentElement) {
-      themeToggle.parentElement.appendChild(selector);
-    }
-
-    // 点击外部关闭
-    setTimeout(() => {
-      const closeSelector = (e) => {
-        if (!selector.contains(e.target) && e.target.id !== 'themeToggle') {
-          selector.remove();
-          document.removeEventListener('click', closeSelector);
-        }
-      };
-      document.addEventListener('click', closeSelector);
-    }, 100);
   }
 
   // 设置主题
   setTheme(themeId) {
-    const theme = this.themes.find(t => t.id === themeId);
-    if (!theme) return;
-    
-    // 应用主题
-    document.documentElement.setAttribute('data-theme', themeId);
-    
-    // 更新按钮图标
-    const themeToggle = document.getElementById('themeToggle');
-    if (themeToggle) {
-      themeToggle.textContent = theme.icon;
-      themeToggle.title = `主题: ${theme.name}`;
-    }
-    
+    if (this.currentTheme === themeId) return;
+
     this.currentTheme = themeId;
+
+    // 应用主题到DOM
+    this.applyTheme(themeId);
+
+    // 更新活跃状态
+    this.updateActiveTheme();
+
+    // 保存到本地存储
     this.saveTheme();
-    
-    // 触发主题变更事件
+
+    // 触发回调
     if (this.onThemeChangeCallback) {
       this.onThemeChangeCallback(themeId);
+    }
+
+    // 关闭模态框
+    this.hideModal();
+  }
+
+  // 应用主题
+  applyTheme(themeId) {
+    const body = document.body;
+
+    // 移除所有主题类
+    this.themes.forEach(theme => {
+      body.classList.remove(`theme-${theme.id}`);
+      body.removeAttribute('data-theme');
+    });
+
+    // 添加新主题
+    if (themeId !== 'default') {
+      body.setAttribute('data-theme', themeId);
     }
   }
 
@@ -109,84 +153,37 @@ class ThemeSelector {
     return this.currentTheme;
   }
 
-  // 获取所有主题
-  getThemes() {
-    return this.themes;
-  }
-
-  // 添加新主题
-  addTheme(theme) {
-    if (!this.themes.find(t => t.id === theme.id)) {
-      this.themes.push(theme);
-    }
-  }
-
-  // 移除主题
-  removeTheme(themeId) {
-    const index = this.themes.findIndex(t => t.id === themeId);
-    if (index !== -1 && themeId !== 'light' && themeId !== 'dark') {
-      this.themes.splice(index, 1);
-      if (this.currentTheme === themeId) {
-        this.setTheme('light');
-      }
-    }
-  }
-
-  // 保存主题设置
-  saveTheme() {
-    if (window.storageAPI) {
-      window.storageAPI.setItem('markdownEditor.theme', this.currentTheme);
-    }
-  }
-
-  // 加载保存的主题
-  loadSavedTheme() {
-    if (window.storageAPI) {
-      const savedTheme = window.storageAPI.getItem('markdownEditor.theme');
-      if (savedTheme && this.themes.some(t => t.id === savedTheme)) {
-        this.setTheme(savedTheme);
-      } else {
-        this.setTheme('light');
-      }
-    }
-  }
-
-  // 切换到下一个主题
-  nextTheme() {
-    const currentIndex = this.themes.findIndex(t => t.id === this.currentTheme);
-    const nextIndex = (currentIndex + 1) % this.themes.length;
-    this.setTheme(this.themes[nextIndex].id);
-  }
-
-  // 切换到上一个主题
-  previousTheme() {
-    const currentIndex = this.themes.findIndex(t => t.id === this.currentTheme);
-    const prevIndex = (currentIndex - 1 + this.themes.length) % this.themes.length;
-    this.setTheme(this.themes[prevIndex].id);
-  }
-
-  // 切换明暗主题
-  toggleDarkMode() {
-    if (this.currentTheme === 'dark') {
-      this.setTheme('light');
-    } else {
-      this.setTheme('dark');
-    }
-  }
-
   // 设置主题变更回调
   setOnThemeChange(callback) {
     this.onThemeChangeCallback = callback;
   }
 
-  // 清理
-  destroy() {
-    const selector = document.getElementById('themeSelector');
-    if (selector) {
-      selector.remove();
+  // 加载保存的主题
+  loadSavedTheme() {
+    const settings = window.storageService?.loadSettings() || {};
+    const savedTheme = settings.theme || 'default';
+    this.setTheme(savedTheme);
+  }
+
+  // 保存主题设置
+  saveTheme() {
+    if (window.storageService) {
+      const currentSettings = window.storageService.loadSettings() || {};
+      currentSettings.theme = this.currentTheme;
+      window.storageService.saveSettings(currentSettings);
     }
+  }
+
+  // 获取主题列表
+  getThemes() {
+    return this.themes;
+  }
+
+  // 获取主题信息
+  getThemeInfo(themeId) {
+    return this.themes.find(theme => theme.id === themeId);
   }
 }
 
-// 将类挂载到全局对象
+// 导出组件
 window.ThemeSelector = ThemeSelector;

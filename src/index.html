@@ -365,6 +365,122 @@
         </div>
     </div>
 
+    <!-- 主题设置模态框 -->
+    <div id="themeSettingsModal" class="modal" style="display: none;">
+        <div class="modal-content theme-settings-modal">
+            <div class="modal-header">
+                <h3>主题设置</h3>
+                <button id="closeThemeSettings" class="btn btn-icon" title="关闭">
+                    ✕
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="theme-grid">
+                    <div class="theme-option" data-theme="default">
+                        <div class="theme-preview default-preview">
+                            <div class="preview-header"></div>
+                            <div class="preview-body">
+                                <div class="preview-text"></div>
+                                <div class="preview-text short"></div>
+                            </div>
+                        </div>
+                        <div class="theme-info">
+                            <span class="theme-icon">🌅</span>
+                            <span class="theme-name">默认浅色</span>
+                        </div>
+                    </div>
+
+                    <div class="theme-option" data-theme="dark">
+                        <div class="theme-preview dark-preview">
+                            <div class="preview-header"></div>
+                            <div class="preview-body">
+                                <div class="preview-text"></div>
+                                <div class="preview-text short"></div>
+                            </div>
+                        </div>
+                        <div class="theme-info">
+                            <span class="theme-icon">🌙</span>
+                            <span class="theme-name">暗语</span>
+                        </div>
+                    </div>
+
+                    <div class="theme-option" data-theme="forest">
+                        <div class="theme-preview forest-preview">
+                            <div class="preview-header"></div>
+                            <div class="preview-body">
+                                <div class="preview-text"></div>
+                                <div class="preview-text short"></div>
+                            </div>
+                        </div>
+                        <div class="theme-info">
+                            <span class="theme-icon">🌲</span>
+                            <span class="theme-name">森林</span>
+                        </div>
+                    </div>
+
+                    <div class="theme-option" data-theme="sunset">
+                        <div class="theme-preview sunset-preview">
+                            <div class="preview-header"></div>
+                            <div class="preview-body">
+                                <div class="preview-text"></div>
+                                <div class="preview-text short"></div>
+                            </div>
+                        </div>
+                        <div class="theme-info">
+                            <span class="theme-icon">🌇</span>
+                            <span class="theme-name">日落</span>
+                        </div>
+                    </div>
+
+                    <div class="theme-option" data-theme="ocean">
+                        <div class="theme-preview ocean-preview">
+                            <div class="preview-header"></div>
+                            <div class="preview-body">
+                                <div class="preview-text"></div>
+                                <div class="preview-text short"></div>
+                            </div>
+                        </div>
+                        <div class="theme-info">
+                            <span class="theme-icon">🌊</span>
+                            <span class="theme-name">海洋</span>
+                        </div>
+                    </div>
+
+                    <div class="theme-option" data-theme="monokai">
+                        <div class="theme-preview monokai-preview">
+                            <div class="preview-header"></div>
+                            <div class="preview-body">
+                                <div class="preview-text"></div>
+                                <div class="preview-text short"></div>
+                            </div>
+                        </div>
+                        <div class="theme-info">
+                            <span class="theme-icon">🎨</span>
+                            <span class="theme-name">Monokai</span>
+                        </div>
+                    </div>
+
+                    <div class="theme-option" data-theme="rose">
+                        <div class="theme-preview rose-preview">
+                            <div class="preview-header"></div>
+                            <div class="preview-body">
+                                <div class="preview-text"></div>
+                                <div class="preview-text short"></div>
+                            </div>
+                        </div>
+                        <div class="theme-info">
+                            <span class="theme-icon">🌹</span>
+                            <span class="theme-name">玫瑰</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="resetTheme" class="btn btn-secondary">重置为默认</button>
+            </div>
+        </div>
+    </div>
+
     <!-- 加载遮罩 -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-content">
