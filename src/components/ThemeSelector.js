@@ -144,18 +144,18 @@ class ThemeSelector {
   }
 
   // 设置主题
-  setTheme(themeId) {
+  // opts:
+  //   - closeModal: 是否在设置主题后关闭模态框，默认 true（用户交互时）
+  //   - throttle: 是否节流（延时应用），默认 true；初始化时应为 false
+  setTheme(themeId, opts = {}) {
+    const { closeModal = true, throttle = true } = opts;
     if (this.currentTheme === themeId) return;
 
-    // 使用节流避免频繁切换
-    if (this.themeChangeTimeout) {
-      clearTimeout(this.themeChangeTimeout);
-    }
-
-    this.themeChangeTimeout = setTimeout(() => {
+    // 内部应用函数，统一执行一次更新
+    const apply = () => {
       this.currentTheme = themeId;
 
-      // 应用主题到DOM
+      // 应用主题到 DOM
       this.applyTheme(themeId);
 
       // 更新活跃状态
@@ -169,26 +169,37 @@ class ThemeSelector {
         this.onThemeChangeCallback(themeId);
       }
 
-      // 关闭模态框
-      this.hideModal();
-    }, 50);
+      // 根据需要关闭模态框（初始化时不关闭）
+      if (closeModal) {
+        this.hideModal();
+      }
+    };
+
+    // 使用节流避免频繁切换（仅在需要时）
+    if (throttle) {
+      if (this.themeChangeTimeout) {
+        clearTimeout(this.themeChangeTimeout);
+      }
+      this.themeChangeTimeout = setTimeout(apply, 50);
+    } else {
+      apply();
+    }
   }
 
   // 应用主题
   applyTheme(themeId) {
     const body = this.cachedElements.body;
 
-    // 使用单次操作优化性能
-    if (this.currentTheme !== 'default') {
-      body.removeAttribute('data-theme');
-    }
+    // 先移除旧的主题标记，再根据新主题决定是否添加
+    // 这样可以正确从非默认主题切回默认主题
+    body.removeAttribute('data-theme');
 
-    // 添加新主题
     if (themeId !== 'default') {
       body.setAttribute('data-theme', themeId);
     }
 
-    // 强制重排优化
+    // 强制重排优化（确保样式立即生效）
+    // eslint-disable-next-line no-unused-expressions
     body.offsetHeight;
   }
 
@@ -206,7 +217,8 @@ class ThemeSelector {
   loadSavedTheme() {
     const settings = window.storageService?.loadSettings() || {};
     const savedTheme = settings.theme || 'default';
-    this.setTheme(savedTheme);
+    // 初始化时应用主题：不节流、不关闭模态框
+    this.setTheme(savedTheme, { throttle: false, closeModal: false });
   }
 
   // 保存主题设置
