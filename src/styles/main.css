@@ -227,7 +227,7 @@
     flex-direction: column;
     width: 250px;
     min-width: 200px;
-    max-width: 400px;
+    max-width: none; /* 允许拖拽到更宽 */
     background: var(--bg-secondary);
         backdrop-filter: blur(20px) saturate(180%);
         border-right: 0.5px solid var(--separator-color);
@@ -296,7 +296,26 @@
     overflow-y: auto;
     background-color: var(--bg-primary);
     border-left: 1px solid var(--border-color);
+    display: flex;                 /* 居中内部内容块，避免拉伸时抖动 */
+    align-items: flex-start;
+    scrollbar-gutter: stable both-edges; /* 避免滚动条出现/消失引发内容抖动 */
 }
+
+/* 预览内容限制宽度并水平居中 */
+.preview-content {
+    width: min(860px, 100%);
+    max-width: 860px;
+    margin: 0 auto;               /* 内容块始终水平居中 */
+    text-align: left;             /* 文本左对齐，整体块居中，稳定无闪烁 */
+}
+/* 列表/表格/代码块按常规左对齐，整体块仍居中 */
+.preview-content ul,
+.preview-content ol {
+    padding-left: 2rem;
+    list-style-position: outside;
+}
+.preview-content pre,
+.preview-content table { margin-left: auto; margin-right: auto; }
 
 /* 空白状态 */
 .empty-state {

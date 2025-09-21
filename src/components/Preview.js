@@ -28,24 +28,29 @@ class Preview {
   // 渲染 Markdown
   renderMarkdown(content) {
     const html = this.markdownParser.render(content);
-    this.previewElement.innerHTML = html;
+    // 使用居中限制容器，保持内容在大宽度下也居中显示
+    this.previewElement.innerHTML = `
+      <div class="preview-content">${html}</div>
+    `;
   }
 
   // 显示空白状态
   showEmptyState() {
     this.previewElement.innerHTML = `
-      <div class="empty-state">
-        <h2>欢迎使用 Markdown 编辑器</h2>
-        <p>开始输入 Markdown 内容，右侧将显示实时预览</p>
-        <div class="features">
-          <h3>功能特性：</h3>
-          <ul>
-            <li>实时 Markdown 预览</li>
-            <li>DeepSeek AI 提示词优化</li>
-            <li>明暗主题切换</li>
-            <li>文件管理功能</li>
-            <li>丰富的快捷键支持</li>
-          </ul>
+      <div class="preview-content">
+        <div class="empty-state">
+          <h2>欢迎使用 Markdown 编辑器</h2>
+          <p>开始输入 Markdown 内容，右侧将显示实时预览</p>
+          <div class="features">
+            <h3>功能特性：</h3>
+            <ul>
+              <li>实时 Markdown 预览</li>
+              <li>DeepSeek AI 提示词优化</li>
+              <li>明暗主题切换</li>
+              <li>文件管理功能</li>
+              <li>丰富的快捷键支持</li>
+            </ul>
+          </div>
         </div>
       </div>
     `;

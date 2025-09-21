@@ -82,6 +82,18 @@ class MarkdownEditorApp {
     
     this.fileTree.setOnFolderOpen(() => this.openFolder());
     
+    // 初始化项目级搜索
+    const fileTreePanel = document.getElementById('fileTreePanel');
+    this.projectSearch = new window.ProjectSearch(
+      fileTreePanel,
+      this.fileTree,
+      async ({ filePath, start, end }) => {
+        await this.openFileFromTree(filePath);
+        // 打开后设置选择位置
+        this.editor.setSelection(start, end, true);
+      }
+    );
+
     // 初始化标签页管理器
     this.tabManager = new window.TabManager(document.getElementById('tabs'), (tab) => {
       this.onTabChange(tab);
@@ -128,6 +140,8 @@ class MarkdownEditorApp {
     
     // 初始化分隔条
     this.setupResizer();
+    // 初始化左侧分隔条（文件树宽度调整）
+    this.setupLeftResizer();
   }
   
   setupEventListeners() {
@@ -233,6 +247,18 @@ class MarkdownEditorApp {
             e.preventDefault();
             this.showReplaceDialog();
             break;
+          case 'F': // Ctrl+Shift+F 项目搜索
+            if (e.shiftKey) {
+              e.preventDefault();
+              if (this.projectSearch) this.projectSearch.show();
+            }
+            break;
+          case 'H': // Ctrl+Shift+H 项目替换面板聚焦
+            if (e.shiftKey) {
+              e.preventDefault();
+              if (this.projectSearch) this.projectSearch.show();
+            }
+            break;
         }
       }
     });
@@ -264,6 +290,8 @@ class MarkdownEditorApp {
     let isResizing = false;
     let startX = 0;
     let startEditorWidth = 0;
+    let rafPending = false;
+    let lastClientX = 0;
     
     resizer.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -280,14 +308,18 @@ class MarkdownEditorApp {
       const handleMouseMove = (e) => {
         if (!isResizing) return;
         e.preventDefault();
-        
-        const containerRect = document.querySelector('.main-content').getBoundingClientRect();
-        const deltaX = e.clientX - startX;
-        const deltaPercentage = (deltaX / containerRect.width) * 100;
-        const newPercentage = Math.max(25, Math.min(75, startEditorWidth + deltaPercentage));
-        
-        editorPanel.style.flex = `0 0 ${newPercentage}%`;
-        previewPanel.style.flex = `0 0 ${100 - newPercentage}%`;
+        lastClientX = e.clientX;
+        if (rafPending) return;
+        rafPending = true;
+        requestAnimationFrame(() => {
+          const containerRect = document.querySelector('.main-content').getBoundingClientRect();
+          const deltaX = lastClientX - startX;
+          const deltaPercentage = (deltaX / containerRect.width) * 100;
+          const newPercentage = Math.max(25, Math.min(75, startEditorWidth + deltaPercentage));
+          editorPanel.style.flex = `0 0 ${newPercentage}%`;
+          previewPanel.style.flex = `0 0 ${100 - newPercentage}%`;
+          rafPending = false;
+        });
       };
       
       const handleMouseUp = () => {
@@ -299,6 +331,59 @@ class MarkdownEditorApp {
         document.removeEventListener('mouseup', handleMouseUp);
       };
       
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+    });
+  }
+
+  setupLeftResizer() {
+    const leftResizer = document.getElementById('leftResizer');
+    const fileTreePanel = document.getElementById('fileTreePanel');
+    const mainContent = document.querySelector('.main-content');
+
+    if (!leftResizer || !fileTreePanel || !mainContent) return;
+
+    let isResizing = false;
+    let startX = 0;
+    let startWidth = 0;
+
+    const minWidth = 180; // 最小宽度
+    const maxRatio = 0.7; // 最大为容器宽度的 70%
+
+    leftResizer.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = fileTreePanel.getBoundingClientRect().width;
+
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      leftResizer.classList.add('resizing');
+
+      const handleMouseMove = (e) => {
+        if (!isResizing) return;
+        e.preventDefault();
+        const containerRect = mainContent.getBoundingClientRect();
+        const deltaX = e.clientX - startX;
+        let newWidth = startWidth + deltaX;
+        const maxWidth = containerRect.width * maxRatio;
+        newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+        fileTreePanel.style.width = `${newWidth}px`;
+      };
+
+      const handleMouseUp = () => {
+        isResizing = false;
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+        leftResizer.classList.remove('resizing');
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        // 持久化宽度
+        const width = fileTreePanel.getBoundingClientRect().width;
+        this.sidebarWidth = Math.round(width);
+        this.saveSettings();
+      };
+
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     });
@@ -397,6 +482,28 @@ class MarkdownEditorApp {
   
   loadFileContent({ filePath, content }) {
     this.openFileInTab({ filePath, content });
+  }
+
+  // 当文件在磁盘上被外部流程修改（例如项目级替换）时，刷新已打开的标签页
+  async refreshOpenFileFromDisk(filePath) {
+    if (!this.tabManager) return;
+    const tabId = filePath; // 打开的文件标签 id 即为文件路径
+    const tab = this.tabManager.getTab(tabId);
+    if (!tab) return;
+
+    if (window.electronAPI) {
+      const r = await window.electronAPI.readFile(filePath);
+      if (r.success) {
+        // 更新标签与编辑器
+        this.tabManager.updateTab(tabId, { content: r.content, isDirty: false });
+        if (this.tabManager.getCurrentTab() && this.tabManager.getCurrentTab().id === tabId) {
+          this.editor.setContent(r.content);
+          this.isDirty = false;
+          this.preview.update(r.content);
+          await this.updateUI();
+        }
+      }
+    }
   }
   
   loadContent(content, fileName = null) {
@@ -1210,7 +1317,8 @@ class MarkdownEditorApp {
   saveSettings() {
     window.storageService.saveSettings({
       theme: this.themeSelector.getCurrentTheme(),
-      previewVisible: this.isPreviewVisible
+      previewVisible: this.isPreviewVisible,
+      sidebarWidth: this.sidebarWidth || document.getElementById('fileTreePanel')?.getBoundingClientRect().width || 250
     });
   }
   
@@ -1226,6 +1334,13 @@ class MarkdownEditorApp {
         togglePreviewBtn.title = '隐藏预览';
         togglePreviewBtn.style.opacity = '1';
       }
+    }
+
+    // 应用侧边栏宽度
+    const fileTreePanel = document.getElementById('fileTreePanel');
+    if (fileTreePanel && settings.sidebarWidth) {
+      fileTreePanel.style.width = `${settings.sidebarWidth}px`;
+      this.sidebarWidth = settings.sidebarWidth;
     }
   }
   
